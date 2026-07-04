@@ -25,12 +25,14 @@ Canonical source for the flight log / accounting-export system, shared
 between multiple clubs. This repo is the single source of truth —
 **never edit code directly in the Apps Script browser editor**. Edit
 here, push, then deploy via GitHub Actions.
+  
 **WARNING: Manual edits/new files in a live Apps Script editor will be silently destroyed on the next deploy!**
+  
 `clasp push` replaces the **entire** contents of the target project with
 whatever's in this repo — there's no partial update. Any file added, or
 any edit made, directly in a club's Apps Script editor will be **silently
 deleted** on the next deploy. No warning, no diff, no confirmation.
-
+  
 If you want to try something quickly: use the sandbox project, not a
 live club project. Once it works, commit it here and deploy properly.
 
