@@ -22,11 +22,9 @@ Invoice Export screen.
 # ASMB Flight Log — Apps Script source
 
 Canonical source for the flight log / accounting-export system, shared
-between ASMB and Club B. This repo is the single source of truth —
+between multiple clubs. This repo is the single source of truth —
 **never edit code directly in the Apps Script browser editor**. Edit
-here, push, then deploy via GitHub Actions. This is the whole fix for
-the "two clubs, two drifting copies" problem — if it stops being true,
-the problem comes back.
+here, push, then deploy via GitHub Actions. 
 
 ## Structure
 
