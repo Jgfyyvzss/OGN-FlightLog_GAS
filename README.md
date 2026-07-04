@@ -14,7 +14,7 @@ Another is to pull the member, instructor and tuggie list from a main club membe
 
 <img width="710" height="771" alt="flighlog snip" src="https://github.com/user-attachments/assets/b1aee448-ba22-495d-b747-042103a042d1" />
 Main airfield data entry screen.
-
-
+<p>
+<p>
 <img width="429" height="351" alt="ASMB Flight Export" src="https://github.com/user-attachments/assets/ddfa1c08-5e71-4b89-a849-aff2161a85af" />
 Invoice Export screen.
