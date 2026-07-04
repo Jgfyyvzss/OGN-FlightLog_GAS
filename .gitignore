@@ -1,0 +1,11 @@
+# Local clasp target config - the workflow generates this per-deploy from
+# repo Variables, so a locally-generated one should never be committed
+# (it would hardcode whichever club you tested against last).
+.clasp.json
+
+# Local clasp login credentials - never commit these.
+.clasprc.json
+
+# OS/editor noise
+.DS_Store
+*.swp
