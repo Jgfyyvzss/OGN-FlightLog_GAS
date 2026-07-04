@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 10px; }
+      button {
+        background: #1a73e8;
+        color: white;
+        border: none;
+        padding: 8px 12px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin-top: 10px;
+      }
+      button:hover { background: #1558b0; }
+    </style>
+  </head>
+  <body>
+
+    <h3>Flight Log Scraper</h3>
+    <p>Select a date to scrape from the glidernet logbook:</p>
+
+    <input type="date" id="scrapeDate" />
+
+    <br>
+    <button onclick="scrape()">Scrape</button>
+
+    <div id="status" style="margin-top:15px; font-size:14px;"></div>
+
+    <script>
+      function scrape() {
+        const d = document.getElementById("scrapeDate").value;
+        if (!d) {
+          document.getElementById("status").innerHTML = "Please select a date.";
+          return;
+        }
+
+        document.getElementById("status").innerHTML = "Scraping… please wait.";
+
+        google.script.run
+          .withSuccessHandler(function(result) {
+            document.getElementById("status").innerHTML =
+              "Scraped " + result.length + " flights.";
+          })
+          .withFailureHandler(function(err) {
+            document.getElementById("status").innerHTML = "Error: " + err.message;
+          })
+          .scrapeTodayFlights(d);
+      }
+    </script>
+
+  </body>
+</html>

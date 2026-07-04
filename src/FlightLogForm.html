@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flight Log - Pilot Entry</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      max-width: 700px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 { color: #333; margin-bottom: 10px; font-size: 28px; }
+    .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
+
+    .action-bar {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+    .btn-primary  { background: #667eea; color: white; }
+    .btn-primary:hover  { background: #5568d3; transform: translateY(-2px); }
+    .btn-secondary { background: #6c757d; color: white; }
+    .btn-secondary:hover { background: #5a6268; }
+    .btn-success  { background: #27ae60; color: white; }
+    .btn-success:hover  { background: #229954; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .form-group { margin-bottom: 24px; }
+
+    label {
+      display: block;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .required { color: #e74c3c; }
+
+    select, input[type="text"], input[type="date"], input[type="time"] {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 15px;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+    select:focus, input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .flight-card {
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 14px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .flight-card:hover  { border-color: #667eea; background: #f0f2ff; }
+    .flight-card.selected { border-color: #667eea; background: #667eea; color: white; }
+
+    .flight-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .flight-info { font-weight: 600; font-size: 15px; }
+
+    @media (max-width: 768px) {
+      .flight-info { font-size: 2.5rem !important; }
+    }
+
+    .flight-status {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-logged      { background: #27ae60; color: white; }
+    .status-flying      { background: #f39c12; color: white; }
+    .status-needs-pilot { background: #95a5a6; color: white; }
+    .flight-card.selected .status-logged,
+    .flight-card.selected .status-flying,
+    .flight-card.selected .status-needs-pilot {
+      background: rgba(255,255,255,0.3);
+    }
+
+    .flight-meta { font-size: 13px; color: #666; line-height: 1.6; }
+    .flight-card.selected .flight-meta { color: rgba(255,255,255,0.9); }
+
+    .tow-info {
+      margin-top: 6px;
+      padding-top: 6px;
+      border-top: 1px solid #ddd;
+      font-size: 12px;
+      color: #777;
+    }
+    .flight-card.selected .tow-info {
+      border-top-color: rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.8);
+    }
+
+    /* ── Toggle-field (visitor / regular) ───────────────────────────── */
+    .toggle-field {
+      position: relative;
+    }
+    .toggle-field .toggle-btn {
+      position: absolute;
+      right: 12px;
+      top: 38px;
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+    .toggle-field .toggle-btn:hover { background: #5568d3; }
+    .toggle-field .visitor-input { display: none; margin-top: 8px; }
+    .toggle-field .visitor-input.active { display: block; }
+
+    .alert {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      font-size: 14px;
+    }
+    .alert-success { background: #d5f4e6; color: #27ae60; border: 2px solid #27ae60; }
+    .alert-error   { background: #ffeaa7; color: #d63031; border: 2px solid #d63031; }
+    .alert-info    { background: #dfe6e9; color: #2d3436; border: 2px solid #636e72; }
+
+    .loading { text-align: center; padding: 40px; color: #666; }
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #667eea;
+      border-radius: 50%;
+      width: 40px; height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0; top: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal.active { display: flex; }
+    .modal-content {
+      background: white;
+      border-radius: 16px;
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 30px;
+      position: relative;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .modal-title { font-size: 24px; font-weight: 600; color: #333; }
+    .modal-close {
+      background: none; border: none;
+      font-size: 28px; color: #999; cursor: pointer;
+      padding: 0; width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 50%; transition: all 0.3s;
+    }
+    .modal-close:hover { background: #f0f0f0; color: #333; }
+
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .section-header {
+      font-size: 16px;
+      font-weight: 600;
+      color: #667eea;
+      margin: 24px 0 12px 0;
+      padding-bottom: 8px;
+      border-bottom: 2px solid #e0e0e0;
+    }
+
+    .tow-list-item {
+      background: #f8f9fa;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .tow-flight-header { font-weight: 600; color: #333; margin-bottom: 8px; font-size: 15px; }
+    .info-text { font-size: 13px; color: #666; margin-bottom: 8px; }
+
+    .input-prefix { position: relative; }
+    .prefix-label {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: #999; font-weight: 600; pointer-events: none;
+    }
+    .input-prefix input { padding-left: 50px; }
+
+    @media (max-width: 768px) {
+      body { padding: 0; align-items: stretch; }
+      .container {
+        border-radius: 0; max-width: 100%;
+        min-height: 100vh; padding: 20px; box-shadow: none;
+      }
+      .action-bar { flex-direction: row; flex-wrap: wrap; }
+      .btn { padding: 12px; font-size: 1.5rem; min-height: 52px; }
+      #refreshBtn  { width: 100%; order: 1; }
+      #addGliderBtn, #addTugBtn { width: calc(50% - 5px); order: 2; }
+      #editFlightBtn, #editTugBtn { width: calc(50% - 5px); order: 1; }
+      #submitBtn { width: 100%; order: 2; }
+      .form-row { grid-template-columns: 1fr; }
+      .modal-content { padding: 20px; max-height: 95vh; }
+      select, input[type="text"], input[type="date"], input[type="time"] {
+        font-size: 2rem; padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 id="pageTitle">✈️ Flight Log</h1>
+    <p class="subtitle">Select your flight and enter pilot details</p>
+
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading today's flights...</p>
+    </div>
+
+    <div id="alert" style="display: none;"></div>
+
+    <form id="flightForm" style="display: none;">
+      <div class="action-bar">
+        <button type="button" id="refreshBtn"   class="btn btn-primary">🔄 Refresh Flights</button>
+        <button type="button" id="addGliderBtn" class="btn btn-primary">➕ Add Glider Flight</button>
+        <button type="button" id="addTugBtn"    class="btn btn-primary">🛩️ Add Tug Flight</button>
+      </div>
+
+      <div class="form-group">
+        <label>Select Your Flight <span class="required">*</span></label>
+        <div id="flightList"></div>
+      </div>
+
+      <!-- Invoiced Pilot / Student / AEF -->
+      <div class="form-group toggle-field" id="tf-pilot">
+        <label>Invoiced Pilot / Student / AEF <span class="required">*</span></label>
+        <select id="pilotSelect" required></select>
+        <input type="text" id="pilotText" class="visitor-input" placeholder="Enter visitor pilot name">
+        <button type="button" class="toggle-btn" data-field="pilot">Visitor</button>
+      </div>
+
+      <!-- Instructor / Priv Pax / Mutual -->
+      <div class="form-group toggle-field" id="tf-pax">
+        <label>Instructor / Priv Pax / Mutual </label>
+        <select id="paxSelect"></select>
+        <input type="text" id="paxText" class="visitor-input" placeholder="Enter visitor / AEF No.">
+        <button type="button" class="toggle-btn" data-field="pax">Visitor</button>
+      </div>
+
+      <!-- Winch Driver — new field, sits between Pax and Payer -->
+      <div class="form-group toggle-field" id="tf-winchDriver">
+        <label>Winch Driver</label>
+        <select id="winchDriverSelect"></select>
+        <input type="text" id="winchDriverText" class="visitor-input" placeholder="Enter visitor winch driver">
+        <button type="button" class="toggle-btn" data-field="winchDriver">Visitor</button>
+      </div>
+
+      <!-- Payer -->
+      <div class="form-group">
+        <label>Payer</label>
+        <select id="payerSelect">
+          <option value=""></option>
+          <option value="Student">Student</option>
+          <option value="AEF">AEF</option>
+          <option value="Shared">Shared</option>
+        </select>
+      </div>
+
+      <div class="action-bar">
+        <button type="button" id="editFlightBtn" class="btn btn-secondary" disabled>Edit Selected Flight</button>
+        <button type="button" id="editTugBtn"    class="btn btn-secondary">✈️ Edit Tugs</button>
+        <button type="submit" id="submitBtn" class="btn btn-success" style="flex: 1;">Submit Flight Log</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       Add Glider Flight Modal
+  ══════════════════════════════════════════════════════════ -->
+  <div id="addGliderModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Add Glider Flight</h2>
+        <button class="modal-close" onclick="closeModal('addGliderModal')">&times;</button>
+      </div>
+      <form id="addGliderForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date <span class="required">*</span></label>
+            <input type="date" id="addGliderDate" required>
+          </div>
+          <div class="form-group">
+            <label>Takeoff Time <span class="required">*</span></label>
+            <input type="time" id="addGliderTakeoff" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Glider Rego <span class="required">*</span></label>
+            <div class="input-prefix">
+              <span class="prefix-label" id="regoPrefix"></span>
+              <input type="text" id="addGliderRego" required placeholder="ABC">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>CN</label>
+            <input type="text" id="addGliderCN" placeholder="AB">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Glider Type <span class="required">*</span></label>
+          <input type="text" id="addGliderType" required placeholder="e.g., ASK-21">
+        </div>
+
+        <div class="form-group">
+          <label>Landing Time</label>
+          <input type="time" id="addGliderLanding">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group toggle-field" id="tf-addGliderPilot">
+            <label>Pilot</label>
+            <select id="addGliderPilotSelect"></select>
+            <input type="text" id="addGliderPilotText" class="visitor-input" placeholder="Enter visitor pilot">
+            <button type="button" class="toggle-btn" data-field="addGliderPilot">Visitor</button>
+          </div>
+          <div class="form-group toggle-field" id="tf-addGliderPax">
+            <label>Passenger / AEF No</label>
+            <select id="addGliderPaxSelect"></select>
+            <input type="text" id="addGliderPaxText" class="visitor-input" placeholder="Enter visitor / AEF No.">
+            <button type="button" class="toggle-btn" data-field="addGliderPax">Visitor</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Payer</label>
+          <select id="addGliderPayer">
+            <option value=""></option>
+            <option value="Pilot">Pilot</option>
+            <option value="AEF">AEF</option>
+            <option value="Shared">Shared</option>
+          </select>
+        </div>
+
+        <div class="section-header">Tug (Optional)</div>
+        <div class="form-group">
+          <label>Select Tug Flight</label>
+          <select id="addGliderTugSelect">
+            <option value="">Select available tug flight...</option>
+          </select>
+        </div>
+
+        <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 20px;">Add Flight</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       Add Tug Flight Modal
+  ══════════════════════════════════════════════════════════ -->
+  <div id="addTugModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Add Tug Flight</h2>
+        <button class="modal-close" onclick="closeModal('addTugModal')">&times;</button>
+      </div>
+      <form id="addTugForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date <span class="required">*</span></label>
+            <input type="date" id="addTugDate" required>
+          </div>
+          <div class="form-group">
+            <label>Takeoff Time <span class="required">*</span></label>
+            <input type="time" id="addTugTakeoff" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Tug Registration <span class="required">*</span></label>
+          <input type="text" id="addTugRego" required placeholder="VH-TOW">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Tug Max Altitude</label>
+            <input type="text" id="addTugMaxAlt" placeholder="e.g., 2000">
+          </div>
+          <div class="form-group">
+            <label>Landing Time</label>
+            <input type="time" id="addTugLanding">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Flight Time (if landing not known)</label>
+          <input type="text" id="addTugTime" placeholder="e.g., 00h15">
+        </div>
+
+        <div class="form-group toggle-field" id="tf-addTugPilot">
+          <label>Tug Pilot</label>
+          <select id="addTugPilotSelect"></select>
+          <input type="text" id="addTugPilotText" class="visitor-input" placeholder="Enter visitor tug pilot">
+          <button type="button" class="toggle-btn" data-field="addTugPilot">Visitor</button>
+        </div>
+
+        <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 20px;">Add Tug Flight</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       Edit Flight Modal
+  ══════════════════════════════════════════════════════════ -->
+  <div id="editFlightModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Flight</h2>
+        <button class="modal-close" onclick="closeModal('editFlightModal')">&times;</button>
+      </div>
+      <form id="editFlightForm">
+        <input type="hidden" id="editFlightKey">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date <span class="required">*</span></label>
+            <input type="date" id="editDate" required>
+          </div>
+          <div class="form-group">
+            <label>Takeoff Time <span class="required">*</span></label>
+            <input type="time" id="editTakeoff" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Glider Rego <span class="required">*</span></label>
+            <input type="text" id="editGlider" required>
+          </div>
+          <div class="form-group">
+            <label>CN</label>
+            <input type="text" id="editCN">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Glider Type <span class="required">*</span></label>
+          <input type="text" id="editType" required>
+        </div>
+
+        <div class="form-group">
+          <label>Landing Time</label>
+          <input type="time" id="editLanding">
+        </div>
+
+        <div class="form-row">
+          <div class="form-group toggle-field" id="tf-editPilot">
+            <label>Pilot</label>
+            <select id="editPilotSelect"></select>
+            <input type="text" id="editPilotText" class="visitor-input" placeholder="Enter visitor pilot">
+            <button type="button" class="toggle-btn" data-field="editPilot">Visitor</button>
+          </div>
+          <div class="form-group toggle-field" id="tf-editPax">
+            <label>Passenger / Instructor</label>
+            <select id="editPaxSelect"></select>
+            <input type="text" id="editPaxText" class="visitor-input" placeholder="Enter visitor pax">
+            <button type="button" class="toggle-btn" data-field="editPax">Visitor</button>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Payer</label>
+          <select id="editPayer">
+            <option value=""></option>
+            <option value="Pilot">Pilot</option>
+            <option value="AEF">AEF</option>
+            <option value="Shared">Shared</option>
+          </select>
+        </div>
+
+        <div class="section-header">Tug / Winch Information</div>
+        <div class="info-text" id="editTugInfo">No tug assigned</div>
+
+        <!-- Tug Pilot (aerotow) -->
+        <div class="form-group toggle-field" id="tf-editTugPilot">
+          <label>Tug Pilot</label>
+          <select id="editTugPilotSelect"></select>
+          <input type="text" id="editTugPilotText" class="visitor-input" placeholder="Enter visitor tug pilot">
+          <button type="button" class="toggle-btn" data-field="editTugPilot">Visitor</button>
+        </div>
+
+        <!-- Winch Driver (winch launch) — new field in edit modal -->
+        <div class="form-group toggle-field" id="tf-editWinchDriver">
+          <label>Winch Driver</label>
+          <select id="editWinchDriverSelect"></select>
+          <input type="text" id="editWinchDriverText" class="visitor-input" placeholder="Enter visitor winch driver">
+          <button type="button" class="toggle-btn" data-field="editWinchDriver">Visitor</button>
+        </div>
+
+        <button type="submit" class="btn btn-success" style="width: 100%; margin-top: 20px;">Save Changes</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       Edit Tugs Modal
+  ══════════════════════════════════════════════════════════ -->
+  <div id="editTugModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Edit Tugs</h2>
+        <button class="modal-close" onclick="closeModal('editTugModal')">&times;</button>
+      </div>
+      <div id="tugFlightsList"></div>
+      <button type="button" class="btn btn-success" onclick="saveTugEdits()"
+              style="width: 100%; margin-top: 20px;">Save All Changes</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════════════
+       JavaScript
+  ══════════════════════════════════════════════════════════ -->
+  <script>
+    // ── State ─────────────────────────────────────────────────────────
+    var flights      = [];
+    var pilots       = [];
+    var instructors  = [];
+    var winchDrivers = [];
+    var tugPilots    = [];
+    var selectedFlight = null;
+    var config = {};
+    var dataLoaded = false;
+    var loadTimeout;
+
+    /**
+     * Toggle-field state map.
+     * Keys match data-field attributes on .toggle-btn elements.
+     * Each entry: { isVisitor, visitorFlag }
+     * visitorFlag is 'Y' when visitor mode is active, '' otherwise.
+     *
+     * Fields that carry a visitor flag written to the sheet are marked flagged: true.
+     * Fields that don't need a flag (tug pilot, winch driver) are flagged: false.
+     */
+    var toggleState = {
+      pilot:           { isVisitor: false, visitorFlag: '', flagged: true },
+      pax:             { isVisitor: false, visitorFlag: '', flagged: true },
+      winchDriver:     { isVisitor: false, visitorFlag: '', flagged: false },
+      addGliderPilot:  { isVisitor: false, visitorFlag: '', flagged: true },
+      addGliderPax:    { isVisitor: false, visitorFlag: '', flagged: true },
+      addTugPilot:     { isVisitor: false, visitorFlag: '', flagged: false },
+      editPilot:       { isVisitor: false, visitorFlag: '', flagged: true },
+      editPax:         { isVisitor: false, visitorFlag: '', flagged: true },
+      editTugPilot:    { isVisitor: false, visitorFlag: '', flagged: false },
+      editWinchDriver: { isVisitor: false, visitorFlag: '', flagged: false }
+    };
+
+    /**
+     * Generic toggle handler.
+     * Finds the toggle-field wrapper by id="tf-{field}", then shows/hides
+     * the select vs the text input within it.
+     */
+    function toggleVisitorField(field, forceState) {
+      var state = toggleState[field];
+      if (!state) return;
+
+      state.isVisitor = (forceState !== undefined) ? forceState : !state.isVisitor;
+      if (state.flagged) {
+        state.visitorFlag = state.isVisitor ? 'Y' : '';
+      }
+
+      var wrapper  = document.getElementById('tf-' + field);
+      if (!wrapper) return;
+
+      var selectEl = wrapper.querySelector('select');
+      var textEl   = wrapper.querySelector('.visitor-input');
+      var btnEl    = wrapper.querySelector('.toggle-btn');
+
+      if (state.isVisitor) {
+        if (selectEl) { selectEl.style.display = 'none'; selectEl.removeAttribute('required'); }
+        if (textEl)   { textEl.classList.add('active'); }
+      } else {
+        if (selectEl) { selectEl.style.display = 'block'; }
+        if (textEl)   { textEl.classList.remove('active'); }
+      }
+
+      if (btnEl) btnEl.textContent = state.isVisitor ? 'Regular' : 'Visitor';
+    }
+
+    /** Read the current value from a toggle-field (select or text input). */
+    function getToggleValue(field) {
+      var state   = toggleState[field];
+      var wrapper = document.getElementById('tf-' + field);
+      if (!wrapper) return '';
+      if (state.isVisitor) {
+        var t = wrapper.querySelector('.visitor-input');
+        return t ? t.value.trim() : '';
+      } else {
+        var s = wrapper.querySelector('select');
+        return s ? s.value : '';
+      }
+    }
+
+    /** Set the value of a toggle-field, switching mode if needed. */
+    function setToggleValue(field, value, list) {
+      var inList = list && list.indexOf(value) >= 0;
+      if (value && !inList) {
+        toggleVisitorField(field, true);
+        var wrapper = document.getElementById('tf-' + field);
+        if (wrapper) {
+          var t = wrapper.querySelector('.visitor-input');
+          if (t) t.value = value;
+        }
+      } else {
+        toggleVisitorField(field, false);
+        var wrapper2 = document.getElementById('tf-' + field);
+        if (wrapper2) {
+          var s = wrapper2.querySelector('select');
+          if (s) s.value = value || '';
+        }
+      }
+    }
+
+    // ── Initialisation ─────────────────────────────────────────────────
+    window.addEventListener('load', function() {
+      setupToggleListeners();
+      loadInitialData();
+      setupActionListeners();
+      var today = new Date().toISOString().split('T')[0];
+      document.getElementById('addGliderDate').value = today;
+      document.getElementById('addTugDate').value    = today;
+    });
+
+    function setupToggleListeners() {
+      document.querySelectorAll('.toggle-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          toggleVisitorField(btn.getAttribute('data-field'));
+        });
+      });
+    }
+
+    function setupActionListeners() {
+      document.getElementById('refreshBtn').addEventListener('click', refreshFlights);
+      document.getElementById('addGliderBtn').addEventListener('click', openAddGliderModal);
+      document.getElementById('addTugBtn').addEventListener('click', openAddTugModal);
+      document.getElementById('editTugBtn').addEventListener('click', openEditTugModal);
+      document.getElementById('editFlightBtn').addEventListener('click', function() {
+        if (selectedFlight) openEditFlightModal(selectedFlight);
+      });
+      document.getElementById('flightForm').addEventListener('submit', handleSubmit);
+      document.getElementById('addGliderForm').addEventListener('submit', handleAddGlider);
+      document.getElementById('addTugForm').addEventListener('submit', handleAddTug);
+      document.getElementById('editFlightForm').addEventListener('submit', handleEditFlight);
+    }
+
+    function debugLog(msg) {
+      console.log(msg);
+    }
+
+    function loadInitialData() {
+      loadTimeout = setTimeout(function() {
+        document.getElementById('loading').style.display = 'none';
+        showAlert('Timeout loading data. Please refresh.', 'error');
+      }, 15000);
+
+      google.script.run
+        .withSuccessHandler(function(data) {
+          clearTimeout(loadTimeout);
+          config       = data.config       || {};
+          // Club branding from Config sheet
+          var clubAbbr = config.CLUB_ABBREVIATION || '';
+          document.title = (clubAbbr ? clubAbbr + ' ' : '') + 'Flight Log - Pilot Entry';
+          document.getElementById('pageTitle').textContent = '✈️ ' + (clubAbbr ? clubAbbr + ' ' : '') + 'Flight Log';
+          flights      = data.flights      || [];
+          pilots       = data.pilots       || [];
+          instructors  = data.instructors  || [];
+          winchDrivers = data.winchDrivers || [];
+          tugPilots    = data.tugPilots    || [];
+
+          // Registration prefix
+          var prefix = config.REG_PREFIX || '';
+          var prefixEl = document.getElementById('regoPrefix');
+          if (prefix) {
+            prefixEl.textContent = prefix;
+          } else {
+            prefixEl.style.display = 'none';
+            document.getElementById('addGliderRego').style.paddingLeft = '12px';
+          }
+
+          dataLoaded = true;
+          initializeForm();
+        })
+        .withFailureHandler(function(err) {
+          clearTimeout(loadTimeout);
+          debugLog('ERROR: ' + err.message);
+          showAlert('Error loading data: ' + err.message, 'error');
+          document.getElementById('loading').style.display = 'none';
+        })
+        .getWebappData();
+    }
+
+    function initializeForm() {
+      try {
+        populateDropdown('pilotSelect',          pilots,       true);
+        populateDropdown('paxSelect',            instructors,  false);  // instructors list
+        populateDropdown('winchDriverSelect',    winchDrivers, false);
+        populateDropdown('addGliderPilotSelect', pilots,       false);
+        populateDropdown('addGliderPaxSelect',   instructors,  false);
+        populateDropdown('addTugPilotSelect',    tugPilots,    false);
+        populateDropdown('editPilotSelect',      pilots,       false);
+        populateDropdown('editPaxSelect',        instructors,  false);
+        populateDropdown('editTugPilotSelect',   tugPilots,    false);
+        populateDropdown('editWinchDriverSelect',winchDrivers, false);
+
+        if (flights.length === 0) {
+          showAlert('No flights yet. Use "Add Glider Flight" or "Refresh Flights".', 'info');
+        } else {
+          populateFlights();
+        }
+
+        document.getElementById('loading').style.display   = 'none';
+        document.getElementById('flightForm').style.display = 'block';
+      } catch (error) {
+        showAlert('Error initializing: ' + error.message, 'error');
+        document.getElementById('loading').style.display = 'none';
+      }
+    }
+
+    /**
+     * Populate a <select> element with an array of string values.
+     * @param {string}   selectId  - element id
+     * @param {string[]} items     - list of option values/labels
+     * @param {boolean}  required  - whether to add a "Select..." placeholder
+     */
+    function populateDropdown(selectId, items, required) {
+      var sel = document.getElementById(selectId);
+      if (!sel) return;
+      sel.innerHTML = '';
+      var placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = required ? 'Select...' : '';
+      sel.appendChild(placeholder);
+      (items || []).forEach(function(item) {
+        var opt = document.createElement('option');
+        opt.value = item;
+        opt.textContent = item;
+        sel.appendChild(opt);
+      });
+    }
+
+    // ── Flight list ────────────────────────────────────────────────────
+    function populateFlights() {
+      var list = document.getElementById('flightList');
+      list.innerHTML = '';
+      if (flights.length === 0) {
+        list.innerHTML = '<div style="text-align:center;padding:20px;color:#666;">No flights yet</div>';
+        return;
+      }
+      flights.forEach(function(flight) {
+        list.appendChild(createFlightCard(flight));
+      });
+    }
+
+    function createFlightCard(flight) {
+      var card = document.createElement('div');
+      card.className = 'flight-card';
+
+      var status = 'needs-pilot', statusText = 'Needs Pilot';
+      if (flight.pilot)       { status = 'logged';  statusText = 'Logged'; }
+      else if (!flight.gLanding) { status = 'flying';  statusText = 'Flying'; }
+
+      var html = '<div class="flight-card-header">' +
+        '<div class="flight-info">' + (flight.glider || '—') + ' (' + (flight.cn || '') + ') - ' + (flight.type || '') + '</div>' +
+        '<span class="flight-status status-' + status + '">' + statusText + '</span>' +
+        '</div>';
+
+      html += '<div class="flight-meta">Takeoff: ' + (flight.takeOff || '');
+      if (flight.gLanding) html += ' • Landing: ' + flight.gLanding;
+      if (flight.gTime)    html += ' • Time: '    + flight.gTime;
+      html += '</div>';
+
+      // Tow/glider info line — always shown when towPlane is set
+      if (flight.towPlane) {
+        html += '<div class="tow-info">Towed by: ' + flight.towPlane + '</div>';
+      }
+
+      // People line — shown when any people data exists
+      var hasPeople = flight.pilot || flight.pax || flight.towPilot;
+      if (hasPeople) {
+        html += '<div class="flight-meta" style="margin-top:6px;">';
+        if (flight.pilot) {
+          html += 'P/S/AEF: ' + flight.pilot;
+        }
+        if (flight.pax) {
+          html += (flight.pilot ? ' • ' : '') + 'Inst/PP/M: ' + flight.pax;
+        }
+        if (flight.towPilot) {
+          html += (flight.pilot || flight.pax ? ' • ' : '') + 'Tug/Winch: ' + flight.towPilot;
+        }
+        if (flight.payer) {
+          html += ' • Payer: ' + flight.payer;
+        }
+        html += '</div>';
+      }
+
+      card.innerHTML = html;
+      card.addEventListener('click', function() { selectFlight(flight, card); });
+      return card;
+    }
+
+    function selectFlight(flight, cardEl) {
+      document.querySelectorAll('.flight-card').forEach(function(c) { c.classList.remove('selected'); });
+      cardEl.classList.add('selected');
+      selectedFlight = flight;
+      document.getElementById('editFlightBtn').disabled = false;
+
+      if (flight.payer) document.getElementById('payerSelect').value = flight.payer;
+
+      setToggleValue('pilot',       flight.pilot || '',      pilots);
+      setToggleValue('pax',         flight.pax   || '',      instructors);
+      setToggleValue('winchDriver', flight.towPilot || '',   winchDrivers);
+    }
+
+    // ── Refresh ────────────────────────────────────────────────────────
+    function refreshFlights() {
+      var btn = document.getElementById('refreshBtn');
+      btn.disabled = true;
+      btn.textContent = '⏳ Refreshing...';
+      showAlert('Fetching latest flights...', 'info');
+
+      google.script.run
+        .withSuccessHandler(function() {
+          google.script.run
+            .withSuccessHandler(function(data) {
+              flights = data || [];
+              populateFlights();
+              showAlert('Refreshed! Found ' + flights.length + ' flight(s).', 'success');
+              btn.disabled = false;
+              btn.textContent = '🔄 Refresh Flights';
+            })
+            .withFailureHandler(function(err) {
+              showAlert('Error: ' + err.message, 'error');
+              btn.disabled = false;
+              btn.textContent = '🔄 Refresh Flights';
+            })
+            .getFlightsForWebapp();
+        })
+        .withFailureHandler(function(err) {
+          showAlert('Error: ' + err.message, 'error');
+          btn.disabled = false;
+          btn.textContent = '🔄 Refresh Flights';
+        })
+        .scrapeTodayFlights();
+    }
+
+    // ── Main form submit ───────────────────────────────────────────────
+    function handleSubmit(e) {
+      e.preventDefault();
+
+      if (!selectedFlight) { showAlert('Please select a flight', 'error'); return; }
+
+      var pilot       = getToggleValue('pilot');
+      var pax         = getToggleValue('pax');
+      var winchDriver = getToggleValue('winchDriver');
+      var payer       = document.getElementById('payerSelect').value;
+
+      if (!pilot) { showAlert('Please enter pilot name', 'error'); return; }
+
+      var submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Submitting...';
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showAlert(result.message, 'success');
+            setTimeout(function() {
+              google.script.run
+                .withSuccessHandler(function(data) {
+                  flights = data || [];
+                  populateFlights();
+                  selectedFlight = null;
+                  document.getElementById('pilotSelect').value       = '';
+                  document.getElementById('paxSelect').value         = '';
+                  document.getElementById('winchDriverSelect').value = '';
+                  document.getElementById('payerSelect').value       = '';
+                  document.getElementById('editFlightBtn').disabled  = true;
+                  // Reset visitor toggles
+                  ['pilot','pax','winchDriver'].forEach(function(f) {
+                    if (toggleState[f].isVisitor) toggleVisitorField(f, false);
+                  });
+                  submitBtn.disabled = false;
+                  submitBtn.textContent = 'Submit Flight Log';
+                })
+                .withFailureHandler(function(err) {
+                  showAlert('Flight logged but error refreshing: ' + err.message, 'error');
+                  submitBtn.disabled = false;
+                  submitBtn.textContent = 'Submit Flight Log';
+                })
+                .getFlightsForWebapp();
+            }, 1500);
+          } else {
+            showAlert(result.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Flight Log';
+          }
+        })
+        .withFailureHandler(function(err) {
+          showAlert('Error: ' + err.message, 'error');
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Submit Flight Log';
+        })
+        .submitPilotData(
+          selectedFlight.flightKey,
+          pilot,
+          pax,
+          payer,
+          toggleState.pilot.visitorFlag,
+          toggleState.pax.visitorFlag,
+          winchDriver                     // new 7th parameter
+        );
+    }
+
+    // ── Modal helpers ──────────────────────────────────────────────────
+    function openModal(id)  { document.getElementById(id).classList.add('active'); }
+    function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+
+    function populateAvailableTugs() {
+      var sel = document.getElementById('addGliderTugSelect');
+      sel.innerHTML = '<option value="">Select available tug flight...</option>';
+      flights.filter(function(f) { return f.towPlane && !f.glider; }).forEach(function(tug) {
+        var opt = document.createElement('option');
+        opt.value = tug.flightKey;
+        opt.textContent = tug.towPlane + ' - ' + tug.takeOff + (tug.towPilot ? ' (' + tug.towPilot + ')' : '');
+        sel.appendChild(opt);
+      });
+    }
+
+    function openAddGliderModal() {
+      document.getElementById('addGliderForm').reset();
+      document.getElementById('addGliderDate').value = new Date().toISOString().split('T')[0];
+      ['addGliderPilot','addGliderPax'].forEach(function(f) {
+        if (toggleState[f].isVisitor) toggleVisitorField(f, false);
+      });
+      populateAvailableTugs();
+      openModal('addGliderModal');
+    }
+
+    function openAddTugModal() {
+      document.getElementById('addTugForm').reset();
+      document.getElementById('addTugDate').value = new Date().toISOString().split('T')[0];
+      if (toggleState.addTugPilot.isVisitor) toggleVisitorField('addTugPilot', false);
+      openModal('addTugModal');
+    }
+
+    function openEditFlightModal(flight) {
+      document.getElementById('editFlightKey').value  = flight.flightKey;
+      document.getElementById('editDate').value       = flight.date;
+      document.getElementById('editTakeoff').value    = (flight.takeOff || '').replace('h', ':');
+      document.getElementById('editGlider').value     = flight.glider || '';
+      document.getElementById('editCN').value         = flight.cn     || '';
+      document.getElementById('editType').value       = flight.type   || '';
+      document.getElementById('editLanding').value    = flight.gLanding ? flight.gLanding.replace('h', ':') : '';
+      document.getElementById('editPayer').value      = flight.payer  || '';
+
+      setToggleValue('editPilot', flight.pilot   || '', pilots);
+      setToggleValue('editPax',   flight.pax     || '', instructors);
+
+      // Tug info display
+      var tugInfo = document.getElementById('editTugInfo');
+      if (flight.towPlane) {
+        tugInfo.textContent = 'Tug: ' + flight.towPlane +
+          (flight.towType   ? ' (' + flight.towType + ')' : '') +
+          (flight.towMaxAlt ? ' • Max Alt: ' + flight.towMaxAlt : '');
+        // Aerotow: populate tug pilot, clear winch driver
+        setToggleValue('editTugPilot',    flight.towPilot || '', tugPilots);
+        setToggleValue('editWinchDriver', '',                    winchDrivers);
+      } else {
+        tugInfo.textContent = 'No tug assigned';
+        // Could be winch launch: populate winch driver from TowPilot
+        setToggleValue('editTugPilot',    '',                    tugPilots);
+        setToggleValue('editWinchDriver', flight.towPilot || '', winchDrivers);
+      }
+
+      openModal('editFlightModal');
+    }
+
+    function openEditTugModal() {
+      var list = document.getElementById('tugFlightsList');
+      list.innerHTML = '';
+      var tugFlights = flights.filter(function(f) { return f.towPlane; });
+
+      if (tugFlights.length === 0) {
+        list.innerHTML = '<p style="text-align:center;color:#666;padding:20px;">No tug flights found</p>';
+      } else {
+        tugFlights.forEach(function(flight, i) {
+          var item = document.createElement('div');
+          item.className = 'tow-list-item';
+          item.innerHTML =
+            '<div class="tow-flight-header">Tug: ' + flight.towPlane + ' - ' + flight.takeOff + '</div>' +
+            '<div class="info-text">Max Alt: ' + (flight.towMaxAlt || 'N/A') + '</div>' +
+            (flight.glider
+              ? '<div class="info-text">Glider: ' + flight.glider + ' (' + flight.cn + ')</div>'
+              : '<div class="info-text" style="color:#999;">No glider assigned</div>') +
+            '<div class="form-group" style="margin-top:12px;"><label>Tug Pilot</label>' +
+            '<select id="tug_pilot_' + i + '"><option value="">Select...</option>' +
+            tugPilots.map(function(p) {
+              return '<option value="' + p + '"' + (p === flight.towPilot ? ' selected' : '') + '>' + p + '</option>';
+            }).join('') +
+            '</select></div>' +
+            '<input type="hidden" id="tug_key_' + i + '" value="' + flight.flightKey + '">';
+          list.appendChild(item);
+        });
+      }
+      openModal('editTugModal');
+    }
+
+    // ── Add Glider submit ──────────────────────────────────────────────
+    function handleAddGlider(e) {
+      e.preventDefault();
+      var prefix = config.REG_PREFIX || '';
+      var flightData = {
+        date:         document.getElementById('addGliderDate').value,
+        glider:       prefix + document.getElementById('addGliderRego').value,
+        cn:           document.getElementById('addGliderCN').value,
+        type:         document.getElementById('addGliderType').value,
+        takeOff:      document.getElementById('addGliderTakeoff').value.replace(':', 'h'),
+        gLanding:     (document.getElementById('addGliderLanding').value || '').replace(':', 'h'),
+        pilot:        getToggleValue('addGliderPilot'),
+        pax:          getToggleValue('addGliderPax'),
+        payer:        document.getElementById('addGliderPayer').value,
+        tugFlightKey: document.getElementById('addGliderTugSelect').value,
+        pilotVisitor: toggleState.addGliderPilot.visitorFlag,
+        paxVisitor:   toggleState.addGliderPax.visitorFlag
+      };
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showAlert('Glider flight added!', 'success');
+            closeModal('addGliderModal');
+            google.script.run.withSuccessHandler(function(data) {
+              flights = data || []; populateFlights();
+            }).getFlightsForWebapp();
+          } else { showAlert(result.message, 'error'); }
+        })
+        .withFailureHandler(function(err) { showAlert('Error: ' + err.message, 'error'); })
+        .addManualGliderFlight(flightData);
+    }
+
+    // ── Add Tug submit ─────────────────────────────────────────────────
+    function handleAddTug(e) {
+      e.preventDefault();
+      var flightData = {
+        date:      document.getElementById('addTugDate').value,
+        towPlane:  document.getElementById('addTugRego').value,
+        takeOff:   document.getElementById('addTugTakeoff').value.replace(':', 'h'),
+        towMaxAlt: document.getElementById('addTugMaxAlt').value,
+        pLanding:  (document.getElementById('addTugLanding').value || '').replace(':', 'h'),
+        pTime:     document.getElementById('addTugTime').value,
+        towPilot:  getToggleValue('addTugPilot')
+      };
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showAlert('Tug flight added!', 'success');
+            closeModal('addTugModal');
+            google.script.run.withSuccessHandler(function(data) {
+              flights = data || []; populateFlights();
+            }).getFlightsForWebapp();
+          } else { showAlert(result.message, 'error'); }
+        })
+        .withFailureHandler(function(err) { showAlert('Error: ' + err.message, 'error'); })
+        .addManualTugFlight(flightData);
+    }
+
+    // ── Edit Flight submit ─────────────────────────────────────────────
+    function handleEditFlight(e) {
+      e.preventDefault();
+
+      // TowPilot receives tug pilot for aerotow, or winch driver for winch launch.
+      // The edit modal shows both fields; the appropriate one will be populated.
+      var towPilotValue = getToggleValue('editTugPilot') || getToggleValue('editWinchDriver');
+
+      var flightData = {
+        flightKey:   document.getElementById('editFlightKey').value,
+        date:        document.getElementById('editDate').value,
+        glider:      document.getElementById('editGlider').value,
+        cn:          document.getElementById('editCN').value,
+        type:        document.getElementById('editType').value,
+        takeOff:     document.getElementById('editTakeoff').value.replace(':', 'h'),
+        gLanding:    (document.getElementById('editLanding').value || '').replace(':', 'h'),
+        pilot:       getToggleValue('editPilot'),
+        pax:         getToggleValue('editPax'),
+        payer:       document.getElementById('editPayer').value,
+        towPilot:    towPilotValue,
+        pilotVisitor: toggleState.editPilot.visitorFlag,
+        paxVisitor:   toggleState.editPax.visitorFlag
+      };
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showAlert('Flight updated!', 'success');
+            closeModal('editFlightModal');
+            google.script.run.withSuccessHandler(function(data) {
+              flights = data || [];
+              populateFlights();
+              selectedFlight = null;
+              document.getElementById('editFlightBtn').disabled = true;
+            }).getFlightsForWebapp();
+          } else { showAlert(result.message, 'error'); }
+        })
+        .withFailureHandler(function(err) { showAlert('Error: ' + err.message, 'error'); })
+        .updateFlight(flightData);
+    }
+
+    // ── Edit Tugs submit ───────────────────────────────────────────────
+    function saveTugEdits() {
+      var tugFlights = flights.filter(function(f) { return f.towPlane; });
+      var updates = tugFlights.map(function(flight, i) {
+        return {
+          flightKey: document.getElementById('tug_key_' + i).value,
+          towPilot:  document.getElementById('tug_pilot_' + i).value
+        };
+      });
+
+      google.script.run
+        .withSuccessHandler(function(result) {
+          if (result.success) {
+            showAlert('Tug data updated!', 'success');
+            closeModal('editTugModal');
+            google.script.run.withSuccessHandler(function(data) {
+              flights = data || []; populateFlights();
+            }).getFlightsForWebapp();
+          } else { showAlert(result.message, 'error'); }
+        })
+        .withFailureHandler(function(err) { showAlert('Error: ' + err.message, 'error'); })
+        .updateTugData(updates);
+    }
+
+    // ── Alert ──────────────────────────────────────────────────────────
+    function showAlert(message, type) {
+      var el = document.getElementById('alert');
+      el.className = 'alert alert-' + type;
+      el.textContent = message;
+      el.style.display = 'block';
+      if (type === 'success') {
+        setTimeout(function() { el.style.display = 'none'; }, 3000);
+      }
+    }
+  </script>
+</body>
+</html>
