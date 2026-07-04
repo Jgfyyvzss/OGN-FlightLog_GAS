@@ -1,0 +1,56 @@
+name: Deploy to Apps Script
+
+# Manual trigger only — deploying is a deliberate action, not automatic on push.
+# Go to the Actions tab → "Deploy to Apps Script" → "Run workflow".
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'Which club(s) to deploy to'
+        required: true
+        default: 'both'
+        type: choice
+        options:
+          - both
+          - asmb
+          - mbgc
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install clasp
+        run: npm install -g @google/clasp
+
+      - name: Restore clasp login credentials
+        run: echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
+
+      - name: Deploy to ASMB
+        if: ${{ inputs.target == 'both' || inputs.target == 'asmb' }}
+        run: |
+          cat > .clasp.json << EOF
+          {
+            "scriptId": "${{ vars.ASMB_SCRIPT_ID }}",
+            "rootDir": "src"
+          }
+          EOF
+          clasp push --force
+
+      - name: Deploy to MBGC
+        if: ${{ inputs.target == 'both' || inputs.target == 'mbgc' }}
+        run: |
+          cat > .clasp.json << EOF
+          {
+            "scriptId": "${{ vars.MBGC_SCRIPT_ID }}",
+            "rootDir": "src"
+          }
+          EOF
+          clasp push --force
