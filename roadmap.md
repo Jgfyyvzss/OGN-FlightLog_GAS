@@ -1,0 +1,5 @@
+This isn't a plan, just things I envisage working on and testing.
+* Use API's to send invoices directly to accounting. Reckon and Manager both have API's that can do this. It would be a manual 'Push', not an automatic thing. Will need some sort of sanity checking by the operator before actually sending the data.
+* Pull 'People' from a Sheet automatically. In another project I am linking club membership data from a Sheet, Reckon (for membership status) and Google Contacts/Groups (for emailing).
+* Possibly port some or all of it to Python/sqlite so it can run on the same server hosting Manager.io. This would reduce the number of 'moving parts' and provide a single point for collecting and processing flight information for multiple clubs. Manager Server can have multiple Businesses, with multiple Users, each with granular control over what they can access and edit. The one install could host several clubs, each isolated from the other but all pulling in data from the one flight log system.
+ 
