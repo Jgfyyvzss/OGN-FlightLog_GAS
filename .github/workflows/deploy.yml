@@ -54,3 +54,15 @@ jobs:
           }
           EOF
           clasp push --force
+
+          
+      - name: Deploy to MBGC
+        if: ${{ inputs.target == 'both' || inputs.target == 'mbgc' }}
+        run: |
+          cat > .clasp.json << EOF
+          {
+            "scriptId": "${{ vars.TEST_SCRIPT_ID }}",
+            "rootDir": "src"
+          }
+          EOF
+          clasp push --force
