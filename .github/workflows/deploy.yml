@@ -11,9 +11,10 @@ on:
         default: 'both'
         type: choice
         options:
-          - both
+          - all
           - asmb
           - mbgc
+          - test
 
 jobs:
   deploy:
@@ -34,7 +35,7 @@ jobs:
         run: echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
 
       - name: Deploy to ASMB
-        if: ${{ inputs.target == 'both' || inputs.target == 'asmb' }}
+        if: ${{ inputs.target == 'all' || inputs.target == 'asmb' }}
         run: |
           cat > .clasp.json << EOF
           {
@@ -45,7 +46,7 @@ jobs:
           clasp push --force
 
       - name: Deploy to MBGC
-        if: ${{ inputs.target == 'both' || inputs.target == 'mbgc' }}
+        if: ${{ inputs.target == 'all' || inputs.target == 'mbgc' }}
         run: |
           cat > .clasp.json << EOF
           {
@@ -56,8 +57,8 @@ jobs:
           clasp push --force
 
           
-      - name: Deploy to MBGC
-        if: ${{ inputs.target == 'both' || inputs.target == 'mbgc' }}
+      - name: Deploy to TEST
+        if: ${{ inputs.target == 'all' || inputs.target == 'test' }}
         run: |
           cat > .clasp.json << EOF
           {
