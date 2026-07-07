@@ -126,8 +126,7 @@ function submitPilotData(flightKey, pilot, pax, payer, pilotVisitor, paxVisitor,
       return { success: false, message: "Flight and Pilot are required" };
     }
 
-    const config = getConfig();
-    const sheetName = config.SHEET_NAME;
+    const sheetName = FLIGHT_LOG_SHEET_NAME;
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(sheetName);
 
@@ -179,8 +178,7 @@ function submitPilotData(flightKey, pilot, pax, payer, pilotVisitor, paxVisitor,
  */
 function addManualGliderFlight(flightData) {
   try {
-    const config = getConfig();
-    const sheetName = config.SHEET_NAME;
+    const sheetName = FLIGHT_LOG_SHEET_NAME;
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(sheetName);
 
@@ -286,8 +284,7 @@ function addManualGliderFlight(flightData) {
  */
 function addManualTugFlight(flightData) {
   try {
-    const config = getConfig();
-    const sheetName = config.SHEET_NAME;
+    const sheetName = FLIGHT_LOG_SHEET_NAME;
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(sheetName);
 
@@ -360,8 +357,7 @@ function addManualTugFlight(flightData) {
  */
 function updateFlight(flightData) {
   try {
-    const config = getConfig();
-    const sheetName = config.SHEET_NAME;
+    const sheetName = FLIGHT_LOG_SHEET_NAME;
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(sheetName);
 
@@ -428,8 +424,7 @@ function updateFlight(flightData) {
  */
 function updateTugData(updates) {
   try {
-    const config = getConfig();
-    const sheetName = config.SHEET_NAME;
+    const sheetName = FLIGHT_LOG_SHEET_NAME;
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(sheetName);
 
