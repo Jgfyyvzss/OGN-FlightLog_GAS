@@ -1,5 +1,4 @@
 name: Deploy to Apps Script
-
 # Manual trigger only — deploying is a deliberate action, not automatic on push.
 # Go to the Actions tab → "Deploy to Apps Script" → "Run workflow".
 on:
@@ -8,13 +7,18 @@ on:
       target:
         description: 'Which club(s) to deploy to'
         required: true
-        default: 'both'
+        default: 'all'
         type: choice
         options:
           - all
           - asmb
           - mbgc
           - test
+      deploy:
+        description: 'Also create a new deployment (make live, not just pushed)'
+        required: true
+        default: false
+        type: boolean
 
 jobs:
   deploy:
@@ -22,19 +26,16 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
-
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
       - name: Install clasp
         run: npm install -g @google/clasp
-
       - name: Restore clasp login credentials
         run: echo '${{ secrets.CLASP_CREDENTIALS }}' > ~/.clasprc.json
 
-      - name: Deploy to ASMB
+      - name: Push to ASMB
         if: ${{ inputs.target == 'all' || inputs.target == 'asmb' }}
         run: |
           cat > .clasp.json << EOF
@@ -45,7 +46,11 @@ jobs:
           EOF
           clasp push --force
 
-      - name: Deploy to MBGC
+      - name: Deploy ASMB
+        if: ${{ inputs.deploy && (inputs.target == 'all' || inputs.target == 'asmb') }}
+        run: clasp deploy -i "${{ vars.ASMB_DEPLOYMENT_ID }}"
+
+      - name: Push to MBGC
         if: ${{ inputs.target == 'all' || inputs.target == 'mbgc' }}
         run: |
           cat > .clasp.json << EOF
@@ -56,8 +61,11 @@ jobs:
           EOF
           clasp push --force
 
-          
-      - name: Deploy to TEST
+      - name: Deploy MBGC
+        if: ${{ inputs.deploy && (inputs.target == 'all' || inputs.target == 'mbgc') }}
+        run: clasp deploy -i "${{ vars.MBGC_DEPLOYMENT_ID }}"
+
+      - name: Push to TEST
         if: ${{ inputs.target == 'all' || inputs.target == 'test' }}
         run: |
           cat > .clasp.json << EOF
@@ -67,3 +75,7 @@ jobs:
           }
           EOF
           clasp push --force
+
+      - name: Deploy TEST
+        if: ${{ inputs.deploy && (inputs.target == 'all' || inputs.target == 'test') }}
+        run: clasp deploy -i "${{ vars.TEST_DEPLOYMENT_ID }}"
