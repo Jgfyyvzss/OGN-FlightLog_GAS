@@ -13,7 +13,7 @@ function fetchFlightsFromHTML(dateStr, targetSheet) {
   const config = getConfig();
   const airportCode = config.AIRPORT_CODE;
   const timezone = config.TIMEZONE;
-  const sheetName = targetSheet || config.SHEET_NAME || "Flight Log";
+  const sheetName = targetSheet || FLIGHT_LOG_SHEET_NAME;
   
   if (!airportCode || !timezone) {
     throw new Error("AIRPORT_CODE and TIMEZONE must be configured in Config sheet");
