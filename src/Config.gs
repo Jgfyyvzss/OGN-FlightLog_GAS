@@ -15,7 +15,7 @@ const Config = (() => {
     });
 
     // Validate required keys
-    const required = ["AIRPORT_CODE", "TIMEZONE", "SHEET_ID", "SHEET_NAME"];
+    const required = ["AIRPORT_CODE", "TIMEZONE", "SHEET_ID"];
     const missing = required.filter(k => !cfg[k]);
     if (missing.length > 0) throw new Error("Missing required config: " + missing.join(", "));
 
