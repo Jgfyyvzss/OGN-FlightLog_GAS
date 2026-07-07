@@ -23,6 +23,8 @@
 // preserve: if true, writeFlightToSheet will NOT overwrite this column when
 //           updating an existing row (pilot-entered data is protected).
 
+const FLIGHT_LOG_SHEET_NAME = 'FlightLog';
+
 const SCHEMA = [
   { col:  1, header: 'FlightKey',    field: 'flightKey',    norm: 'key'          },
   { col:  2, header: 'Date',         field: 'date',         norm: 'date'         },
@@ -108,7 +110,7 @@ function schemaHeaders() {
  */
 function verifySchemaAlignment(sheetName) {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetName || Config.get('SHEET_NAME'));
+  const sheet = ss.getSheetByName(sheetName || FLIGHT_LOG_SHEET_NAME));
   if (!sheet) { Logger.log('verifySchemaAlignment: sheet not found'); return; }
 
   const actual = sheet.getRange(1, 1, 1, SCHEMA_COL_COUNT).getValues()[0];
