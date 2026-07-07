@@ -33,7 +33,7 @@ function onEdit(e) {
     if (!flightKey) return;
 
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const flightLog = ss.getSheetByName("FlightLog");
+    const flightLog = ss.getSheetByName(FLIGHT_LOG_SHEET_NAME);
     const keys = flightLog.getRange("A:A").getValues();
 
     for (let i = 0; i < keys.length; i++) {
