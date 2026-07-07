@@ -36,7 +36,7 @@
 const Flights = (() => {
 
   function load() {
-    return Sheets.getTabAsObjects('FlightLog').map(normalise);
+    return Sheets.getTabAsObjects(FLIGHT_LOG_SHEET_NAME).map(normalise);
   }
 
   function normalise(r) {
