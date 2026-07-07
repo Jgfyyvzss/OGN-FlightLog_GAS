@@ -41,7 +41,8 @@ jobs:
           cat > .clasp.json << EOF
           {
             "scriptId": "${{ vars.ASMB_SCRIPT_ID }}",
-            "rootDir": "src"
+            "rootDir": "src",
+            "filePushOrder": ["src/X_ExportRegistry.gs"]
           }
           EOF
           clasp push --force
@@ -56,7 +57,8 @@ jobs:
           cat > .clasp.json << EOF
           {
             "scriptId": "${{ vars.MBGC_SCRIPT_ID }}",
-            "rootDir": "src"
+            "rootDir": "src",
+            "filePushOrder": ["src/X_ExportRegistry.gs"]
           }
           EOF
           clasp push --force
@@ -71,7 +73,8 @@ jobs:
           cat > .clasp.json << EOF
           {
             "scriptId": "${{ vars.TEST_SCRIPT_ID }}",
-            "rootDir": "src"
+            "rootDir": "src",
+            "filePushOrder": ["src/X_ExportRegistry.gs"]
           }
           EOF
           clasp push --force
