@@ -11,7 +11,7 @@
  */
 function smartFetchFlights(dateStr, targetSheet) {
   const config = getConfig();
-  const sheetName = targetSheet || config.SHEET_NAME || "Flight Log";
+  const sheetName = targetSheet || FLIGHT_LOG_SHEET_NAME;
   
   // Initialize sheet if needed
   const sheet = initializeSheet(sheetName);
