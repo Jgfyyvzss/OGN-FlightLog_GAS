@@ -110,7 +110,7 @@ function schemaHeaders() {
  */
 function verifySchemaAlignment(sheetName) {
   const ss    = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(sheetName || FLIGHT_LOG_SHEET_NAME));
+  const sheet = ss.getSheetByName(sheetName || FLIGHT_LOG_SHEET_NAME);
   if (!sheet) { Logger.log('verifySchemaAlignment: sheet not found'); return; }
 
   const actual = sheet.getRange(1, 1, 1, SCHEMA_COL_COUNT).getValues()[0];
