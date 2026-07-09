@@ -322,15 +322,20 @@
 
       <!-- Payer -->
       <div class="form-group">
-        <label>Payer</label>
+        <label>Special Billing</label>
         <select id="payerSelect">
           <option value=""></option>
-          <option value="Student">Student</option>
           <option value="AEF">AEF</option>
           <option value="Shared">Shared</option>
+          <option value="No Bill">No Bill</option>
         </select>
       </div>
 
+      <div class="form-group">
+        <label>Remarks</label>
+        <input type="text" id="remarksInput" maxlength="80" placeholder="e.g. cable break, No Bill reason">
+      </div>
+      
       <div class="action-bar">
         <button type="button" id="editFlightBtn" class="btn btn-secondary" disabled>Edit Selected Flight</button>
         <button type="button" id="editTugBtn"    class="btn btn-secondary">✈️ Edit Tugs</button>
@@ -400,12 +405,12 @@
         </div>
 
         <div class="form-group">
-          <label>Payer</label>
+          <label>Special Billing</label>
           <select id="addGliderPayer">
             <option value=""></option>
-            <option value="Pilot">Pilot</option>
             <option value="AEF">AEF</option>
             <option value="Shared">Shared</option>
+            <option value="No Bill">No Bill</option>
           </select>
         </div>
 
@@ -536,13 +541,18 @@
         </div>
 
         <div class="form-group">
-          <label>Payer</label>
+          <label>Special Billing</label>
           <select id="editPayer">
             <option value=""></option>
-            <option value="Pilot">Pilot</option>
-            <option value="AEF">AEF</option>
-            <option value="Shared">Shared</option>
+          <option value="AEF">AEF</option>
+          <option value="Shared">Shared</option>
+          <option value="No Bill">No Bill</option>
           </select>
+        </div>
+        
+        <div class="form-group">
+          <label>Remarks</label>
+          <input type="text" id="editRemarks" maxlength="80" placeholder="e.g. cable break, No Bill reason">
         </div>
 
         <div class="section-header">Tug / Winch Information</div>
@@ -929,6 +939,7 @@
       var pax         = getToggleValue('pax');
       var winchDriver = getToggleValue('winchDriver');
       var payer       = document.getElementById('payerSelect').value;
+      var remarks     = document.getElementById('remarksInput').value;
 
       if (!pilot) { showAlert('Please enter pilot name', 'error'); return; }
 
@@ -950,6 +961,7 @@
                   document.getElementById('paxSelect').value         = '';
                   document.getElementById('winchDriverSelect').value = '';
                   document.getElementById('payerSelect').value       = '';
+                  document.getElementById('remarksInput').value      = '';
                   document.getElementById('editFlightBtn').disabled  = true;
                   // Reset visitor toggles
                   ['pilot','pax','winchDriver'].forEach(function(f) {
@@ -983,7 +995,8 @@
           payer,
           toggleState.pilot.visitorFlag,
           toggleState.pax.visitorFlag,
-          winchDriver                     // new 7th parameter
+          winchDriver,
+          remarks
         );
     }
 
@@ -1028,6 +1041,7 @@
       document.getElementById('editType').value       = flight.type   || '';
       document.getElementById('editLanding').value    = flight.gLanding ? flight.gLanding.replace('h', ':') : '';
       document.getElementById('editPayer').value      = flight.payer  || '';
+      document.getElementById('editRemarks').value    = flight.remarks || '';
 
       setToggleValue('editPilot', flight.pilot   || '', pilots);
       setToggleValue('editPax',   flight.pax     || '', instructors);
@@ -1157,6 +1171,7 @@
         type:        document.getElementById('editType').value,
         takeOff:     document.getElementById('editTakeoff').value.replace(':', 'h'),
         gLanding:    (document.getElementById('editLanding').value || '').replace(':', 'h'),
+        remarks:     document.getElementById('editRemarks').value,
         pilot:       getToggleValue('editPilot'),
         pax:         getToggleValue('editPax'),
         payer:       document.getElementById('editPayer').value,
