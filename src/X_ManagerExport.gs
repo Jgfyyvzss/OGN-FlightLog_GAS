@@ -94,15 +94,20 @@ function runManagerExport() {
 
   X_Audit.log('EXPORT_START', EXPORT_ID);
 
-  const { tsv, batchId, flights, exported, noBillFlights } = generateManagerExport();
+const { tsv, batchId, eligible, noBillFlights } = generateManagerExport();
 
-  const blob = Utilities.newBlob(
-    tsv,
-    'text/csv',
-    `ManagerExport_${batchId}.csv`
-  );
+    DriveApp.createFile(
+      Utilities.newBlob(tsv, 'text/csv', 'ManagerExport_' + batchId + '.csv')
+    );
 
-  DriveApp.createFile(blob);
+    let summary = '';
+    if (noBillFlights.length > 0) {
+      summary = noBillFlights.length + " flight(s) marked 'No Bill' (included at $0):\n" +
+        noBillFlights.map(f => '  ' + f.pilot + ' — ' + f.date + ' ' + f.glider +
+          (f.remarks ? ' (' + f.remarks + ')' : '')).join('\n');
+    }
+
+    return { tsv: tsv, count: eligible.length, batchId: batchId, summary: summary };
 
   const skipped = flights.filter(f =>
     !f.pilot && !exported.has(f.key)
