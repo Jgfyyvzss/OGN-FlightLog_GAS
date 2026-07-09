@@ -1,7 +1,8 @@
 /**
  * X_InstructorCreditExport.gs - Instructor Credit Note Export
  *
- * Eligible flights: Pax AND Pilot populated, AND Payer = 'Student' OR 'AEF'
+ * Eligible flights: Pax AND Pilot populated, AND Payer is blank (default -
+ * Pilot pays, the normal instructional-flight case) or AEF.
  * The Pax field holds the instructor's name.
  *
  * One credit note row per instructor. Qty = number of eligible flights.
@@ -15,7 +16,8 @@
  * Rate source: Costs sheet key INSTRUCTING_CREDIT (per flight)
  *
  * Un-exported tracking uses X_ExportState with EXPORT_ID = 'instructor_credit_tsv'.
- * Gated on manager_csv export (same CREDIT_GATE logic as tow credits).
+ * Gated on the Manager invoice export (same credit-gate logic as tow credits,
+ * shared via X_ExportBase.isCreditGateDisabled()).
  */
 
 const INSTRUCTOR_CREDIT_EXPORT_ID = 'instructor_credit_tsv';
@@ -95,16 +97,14 @@ function generateInstructorCreditExport() {
   const flights = Flights.load();
   const creditExported = X_ExportState.exportedKeys(INSTRUCTOR_CREDIT_EXPORT_ID);
 
-  const gateDisabled = (() => {
-    try { return Config.get('CREDIT_GATE') === 'OFF'; } catch (e) { return false; }
-  })();
+  const gateDisabled = X_ExportBase.isCreditGateDisabled();
 
   const flightExported = gateDisabled
     ? null
-    : X_ExportState.exportedKeys('manager_csv');
+    : X_ExportState.exportedKeys(MANAGER_EXPORT_ID);
 
-  // Eligible: Pilot & Pax populated, Payer is Student or AEF, not yet credited,
-  // and (if gate on) already invoiced.
+  // Eligible: Pilot & Pax populated, Payer is blank (default) or AEF,
+  // not yet credited, and (if gate on) already invoiced.
   const eligible = flights.filter(f =>
     f.pilot &&
     f.pax &&
