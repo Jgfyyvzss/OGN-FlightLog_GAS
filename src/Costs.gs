@@ -66,8 +66,8 @@ const Costs = (() => {
    */
   function aefAerotowMode() {
     const mode = getString('AEF_AEROTOW_MODE');
-    if (!['EXTERNAL', 'INHOUSE'].includes(mode)) {
-      throw new Error("AEF_AEROTOW_MODE must be 'EXTERNAL' or 'INHOUSE'");
+    if (![AEROTOW_MODE.EXTERNAL, AEROTOW_MODE.INHOUSE].includes(mode)) {
+      throw new Error(`AEF_AEROTOW_MODE must be '${AEROTOW_MODE.EXTERNAL}' or '${AEROTOW_MODE.INHOUSE}'`);
     }
     return mode;
   }
