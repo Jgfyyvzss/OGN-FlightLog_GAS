@@ -27,7 +27,7 @@
  *   pilot        {string}
  *   paxVisitor   {boolean} true if pax is a visitor
  *   pax          {string}
- *   payer        {string}  Pilot | AEF | Shared | Passenger
+ *   payer        {string}  AEF | Shared | No Bill
  *   towPilot     {string}
  *   selfLaunch   {boolean} derived: true when no towPlane and maxAlt > 0
  *                          (kept for Billing compatibility)
