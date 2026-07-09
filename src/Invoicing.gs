@@ -1,31 +1,56 @@
-
 /**
  * Invoicing.gs - Shared invoice-building logic
- * Used by X_ManagerExport.gs and (later) X_ReckonExport.gs
+ * Used by X_ManagerExport.gs, X_ReckonExport.gs, and X_CsvExport.gs
  *
  * Produces a generic invoice structure:
  *   { customer, reference, description, lines: [{item, description, qty, unitPrice, division}] }
  *
- * AEF invoices: lines keep their real qty (record of launches/time
- * consumed) but unitPrice is forced to 0.00 - no money changes hands,
- * since AEF income was recognised at time of voucher sale. Any real
- * external aerotow cost is tracked separately via the AEF accrual
- * journal export (X_AEFAccrualExport.gs), not on this invoice.
+ * Special Billing (Payer field) values:
+ *   ''         - default: Pilot pays in full
+ *   'AEF'      - pre-paid voucher: qty preserved for record-keeping, price forced to $0
+ *   'Shared'   - split 50/50 between Pilot and Pax, only when Config SPLIT_BILLING = 'ON'
+ *                (falls through to default "Pilot pays" when off)
+ *   'No Bill'  - qty preserved, price forced to $0 (manual override, e.g. cable break,
+ *                training/review flight normally billable but waived)
+ *
+ * AEF and No Bill share one mechanism: payerPriceMultiplier() returns 0 for both,
+ * applied uniformly to every line a flight generates. This replaces the old approach
+ * of forcing AEF lines to $0.00 after the fact.
+ *
+ * MIN_BILLABLE_MINUTES (Config): floors the billable glider flight time (and tow
+ * plane time, when TOW_BILLING = 'TIME') so a flight logged with zero/near-zero
+ * duration still bills a nominal minimum rather than $0. This does not alter the
+ * raw FlightTime stored in the sheet - it only affects the billing calculation.
+ *
+ * Remarks: appended (truncated to 80 chars) to each line's description, so
+ * context set by the exporter (e.g. reason for No Bill) is visible on the
+ * invoice/CSV line itself.
  */
 const Invoicing = (() => {
 
   /**
-   * Group flights by customer, handling Payer field
+   * Price multiplier for a flight, driven by Payer.
+   * AEF and No Bill both zero the price while preserving qty.
+   * Extension point: future tiered rates (e.g. a partial-rate launch category)
+   * would add another entry here.
+   */
+  function payerPriceMultiplier(payer) {
+    if (payer === 'AEF' || payer === 'No Bill') return 0;
+    return 1;
+  }
+
+  /**
+   * Group flights by customer, handling the Payer field.
    * Returns: Map of customerKey -> {customer, reference, flights, splitRatio, aefFlights?}
    */
   function groupFlightsByCustomer(flights) {
     const groups = new Map();
+    const splitBillingOn = (getConfigValue('SPLIT_BILLING', false) || '').toUpperCase() === 'ON';
 
     flights.forEach(f => {
       const payer = f.payer || 'Pilot';
 
-/* SHARED SPLIT - reinstate when needed
-      if (payer === 'Shared') {
+      if (payer === 'Shared' && splitBillingOn) {
         const pilotKey = `PILOT_${f.pilot}`;
         const paxKey = `PAX_${f.pax}`;
 
@@ -49,7 +74,7 @@ const Invoicing = (() => {
         }
         groups.get(paxKey).flights.push(f);
 
-      } else */ if (payer === 'AEF') {
+      } else if (payer === 'AEF') {
         const aefKey = `AEF_${f.pilot}`;
         if (!groups.has(aefKey)) {
           groups.set(aefKey, {
@@ -66,20 +91,9 @@ const Invoicing = (() => {
           date: f.date
         });
 
-      } else if (payer === 'Passenger') {
-        const paxKey = `PAX_${f.pax}`;
-        if (!groups.has(paxKey)) {
-          groups.set(paxKey, {
-            customer: f.pax,
-            reference: '',
-            flights: [],
-            splitRatio: 1.0
-          });
-        }
-        groups.get(paxKey).flights.push(f);
-
       } else {
-        // Default: Pilot pays
+        // Default: Pilot pays. Covers blank, 'Shared' when split billing is off,
+        // 'No Bill' (grouping unaffected - only price is zeroed), and any other value.
         const pilotKey = f.visitor ? `VISITOR_${f.pilot}` : `PILOT_${f.pilot}`;
         if (!groups.has(pilotKey)) {
           groups.set(pilotKey, {
@@ -98,8 +112,6 @@ const Invoicing = (() => {
 
   /**
    * Returns { isPrivate, division } for a glider.
-   * division is the last 3 chars of the cost key (e.g. "GCN"),
-   * or empty string for private/visiting gliders.
    */
   function gliderInfo(glider) {
     const key = `GLIDER_${glider}`;
@@ -111,15 +123,25 @@ const Invoicing = (() => {
     };
   }
 
-  /**
-   * Count how many line items a flight will generate.
-   */
   function countFlightLines(flight) {
     let count = 1;
     if (flight.towPlane || flight.towType === 'Winch' || (!flight.towPlane && flight.maxAlt > 0)) {
       count++;
     }
     return count;
+  }
+
+  /** Append truncated remarks to a base line description, if present. */
+  function _withRemarks(base, remarks) {
+    if (!remarks) return base;
+    const trimmed = String(remarks).trim().slice(0, 80);
+    return trimmed ? `${base} (${trimmed})` : base;
+  }
+
+  /** Floor a duration (minutes) at MIN_BILLABLE_MINUTES, if configured. */
+  function _floorMinutes(minutes) {
+    const min = Number(getConfigValue('MIN_BILLABLE_MINUTES', false)) || 0;
+    return Math.max(minutes || 0, min);
   }
 
   /**
@@ -132,17 +154,18 @@ const Invoicing = (() => {
 
     const { isPrivate, division } = gliderInfo(flight.glider);
     const gliderRate = isPrivate ? 0 : Costs.gliderRate(flight.glider);
+    const multiplier = payerPriceMultiplier(flight.payer);
 
-    const flightMinutes = flight.flightTime || 0;
-
-    const gliderDesc =
-      `${flight.date} – ${flight.glider} – ${flight.type} – Flight time`;
+    const flightMinutes = _floorMinutes(flight.flightTime);
 
     lines.push({
       item: 'FT',
-      description: gliderDesc,
+      description: _withRemarks(
+        `${flight.date} – ${flight.glider} – ${flight.type} – Flight time`,
+        flight.remarks
+      ),
       qty: (flightMinutes * splitRatio).toFixed(2),
-      unitPrice: gliderRate.toFixed(2),
+      unitPrice: (gliderRate * multiplier).toFixed(2),
       division: division
     });
 
@@ -158,7 +181,7 @@ const Invoicing = (() => {
       const towQty =
         towBilling === 'ALT'
           ? (flight.towAlt || 0)
-          : (flight.planeTime || 0);
+          : _floorMinutes(flight.planeTime);
 
       const towRate =
         towBilling === 'ALT'
@@ -167,9 +190,9 @@ const Invoicing = (() => {
 
       lines.push({
         item: 'AT',
-        description: `${flight.date} – ${flight.glider} – Aerotow`,
+        description: _withRemarks(`${flight.date} – ${flight.glider} – Aerotow`, flight.remarks),
         qty: (towQty * splitRatio).toFixed(2),
-        unitPrice: towRate.toFixed(2),
+        unitPrice: (towRate * multiplier).toFixed(2),
         division: division
       });
 
@@ -179,11 +202,13 @@ const Invoicing = (() => {
       (!flight.towPlane && flight.maxAlt > 0)
     ) {
 
+      const winchRate = flight.visitor ? Costs.winchFeeVisitor() : Costs.winchFee();
+
       lines.push({
         item: 'WL',
-        description: `${flight.date} – ${flight.glider} – Winch launch`,
+        description: _withRemarks(`${flight.date} – ${flight.glider} – Winch launch`, flight.remarks),
         qty: splitRatio.toFixed(2),
-        unitPrice: (flight.visitor ? Costs.winchFeeVisitor() : Costs.winchFee()).toFixed(2),
+        unitPrice: (winchRate * multiplier).toFixed(2),
         division: division
       });
     }
@@ -194,12 +219,6 @@ const Invoicing = (() => {
   /**
    * Build generic invoice objects from a list of eligible flights.
    * Returns: [{ customer, reference, description, lines }]
-   *
-   * AEF invoices: lines keep their real qty (record of launches/time
-   * consumed) but unitPrice is forced to 0.00 - no money changes hands,
-   * since AEF income was recognised at time of voucher sale. Any real
-   * external aerotow cost is tracked separately via the AEF accrual
-   * journal export (X_AEFAccrualExport.gs), not on this invoice.
    */
   function buildInvoices(flights) {
     const groups = groupFlightsByCustomer(flights);
@@ -222,10 +241,6 @@ const Invoicing = (() => {
         lines.push(...buildFlightLines(f, group.splitRatio, context));
       });
 
-      if (isAEF) {
-        lines.forEach(l => { l.unitPrice = '0.00'; });
-      }
-
       invoices.push({
         customer: group.customer,
         reference: group.reference,
@@ -238,6 +253,7 @@ const Invoicing = (() => {
   }
 
   return {
+    payerPriceMultiplier,
     groupFlightsByCustomer,
     gliderInfo,
     countFlightLines,
