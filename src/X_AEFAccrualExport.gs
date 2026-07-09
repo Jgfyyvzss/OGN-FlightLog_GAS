@@ -25,7 +25,7 @@ function runAEFAccrualExport() {
     'ACCRUED_AEROTOW_ACCOUNT'
   ]);
 
-  if (Costs.aefAerotowMode() !== 'EXTERNAL') {
+  if (Costs.aefAerotowMode() !== AEROTOW_MODE.EXTERNAL) {
     throw new Error('AEF_AEROTOW_MODE is not EXTERNAL - no aerotow accrual to export.');
   }
 
@@ -42,7 +42,7 @@ function runAEFAccrualExport() {
 
   const eligible = flights.filter(f =>
     !exported.has(f.key) &&
-    f.payer === 'AEF' &&
+    f.payer === PAYER.AEF &&
     f.towPlane
   );
 
@@ -51,14 +51,14 @@ function runAEFAccrualExport() {
   }
 
   const towBilling = Config.get('TOW_BILLING');
-  const towRate = towBilling === 'ALT' ? Costs.towRateAlt() : Costs.towRateTime();
+  const towRate = towBilling === TOW_BILLING_MODE.ALT ? Costs.towRateAlt() : Costs.towRateTime();
 
   // Sum accrued cost per glider Division
   const byDivision = new Map();
   let total = 0;
 
   eligible.forEach(f => {
-    const towQty = towBilling === 'ALT' ? (f.towAlt || 0) : (f.planeTime || 0);
+    const towQty = towBilling === TOW_BILLING_MODE.ALT ? (f.towAlt || 0) : (f.planeTime || 0);
     const amount = towQty * towRate;
     if (amount <= 0) return;
 
