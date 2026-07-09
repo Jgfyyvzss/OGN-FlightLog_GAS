@@ -199,7 +199,7 @@ const X_ExportBase = (() => {
     ).join('\n');
   }
 
-  /**
+/**
    * Standard batchId format.  Exposed so export definitions can use it
    * outside of run() if needed.
    */
@@ -207,6 +207,19 @@ const X_ExportBase = (() => {
     return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
   }
 
-  return { run, rowsToCsv, rowsToTsv, makeBatchId, eligibleFlights };
+  /**
+   * Returns true if Config.CREDIT_GATE is explicitly set to 'OFF' (credit
+   * exports then skip the "already invoiced via Manager" check). Defaults
+   * to false (gate on) if unset or Config throws.
+   */
+  function isCreditGateDisabled() {
+    try {
+      return Config.get('CREDIT_GATE') === CREDIT_GATE_OFF;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  return { run, rowsToCsv, rowsToTsv, makeBatchId, eligibleFlights, isCreditGateDisabled };
 
 })();
