@@ -5,16 +5,13 @@
  * File → Utilities → Import → IIF Files in Reckon/QuickBooks Desktop.
  *
  * Uses the same Invoicing.buildInvoices() output as the Manager export,
- * so grouping (Pilot / AEF / Visitor / Passenger), AEF $0.00 lines, and
- * the EXTERNAL/INHOUSE aerotow handling are identical between the two.
+ * so grouping (Pilot / AEF / Visitor / Shared), No Bill / AEF $0 lines,
+ * and the EXTERNAL/INHOUSE aerotow handling are identical between the two.
  *
  * Account/Class placeholders (Costs sheet):
  *   AR_ACCOUNT      - Accounts Receivable account (TRNS.ACCNT)
  *   INCOME_ACCOUNT  - single income account for all line items (SPL.ACCNT)
  *   CLASS           - glider Division is passed through to SPL.CLASS.
- *                      Division naming/structure may change pending
- *                      treasurer advice - this export just reflects
- *                      whatever Invoicing.gliderInfo() currently produces.
  *
  * Invocable two ways:
  *   • Menu item → runReckonExport()             saves .iif to Drive
@@ -44,7 +41,7 @@ function generateReckonExport() {
   const flights = Flights.load();
   X_Validation.validateFlights(flights);
 
-  const ignorePilot = getConfigValue('IGNORE_PILOT', false) || 'Z_IGNORE';
+  const ignorePilot = getConfigValue('IGNORE_PILOT', false) || IGNORE_PILOT_DEFAULT;
   const exported = X_ExportState.exportedKeys(RECKON_EXPORT_ID);
 
   const eligible = flights.filter(f =>
@@ -71,8 +68,9 @@ function generateReckonExport() {
     flightCount: eligible.length
   });
 
-  const noBillFlights = eligible.filter(f => f.payer === 'No Bill');
-  return { iif, batchId, eligible, flights, exported };
+  const noBillFlights = eligible.filter(f => f.payer === PAYER.NO_BILL);
+
+  return { iif, batchId, eligible, flights, exported, noBillFlights };
 }
 
 /**
@@ -91,7 +89,7 @@ function runReckonExport() {
 
   X_Audit.log('EXPORT_START', RECKON_EXPORT_ID);
 
-  const { iif, batchId, flights, exported } = generateReckonExport();
+  const { iif, batchId, flights, exported, noBillFlights } = generateReckonExport();
 
   const blob = Utilities.newBlob(
     iif,
@@ -113,6 +111,7 @@ function runReckonExport() {
       `See AuditLog for details.`
     );
   }
+
   if (noBillFlights.length > 0) {
     const list = noBillFlights
       .map(f => `  ${f.pilot} — ${f.date} ${f.glider}${f.remarks ? ' (' + f.remarks + ')' : ''}`)
@@ -125,7 +124,7 @@ function runReckonExport() {
 
 /**
  * Webapp entry point - called from serveManagerExport page.
- * Returns { iif, count, batchId } on success or { error } on failure.
+ * Returns { iif, count, batchId, summary } on success or { error } on failure.
  */
 function runReckonExportFromWebapp(password) {
   const expectedPassword = Config.get('EXPORT_PASSWORD');
@@ -145,17 +144,19 @@ function runReckonExportFromWebapp(password) {
     ]);
     X_Audit.log('EXPORT_START', RECKON_EXPORT_ID);
 
-    const { iif, batchId, eligible } = generateReckonExport();
+    const { iif, batchId, eligible, noBillFlights } = generateReckonExport();
 
     DriveApp.createFile(
       Utilities.newBlob(iif, 'text/plain', 'ReckonExport_' + batchId + '.iif')
     );
-let summary = '';
+
+    let summary = '';
     if (noBillFlights.length > 0) {
       summary = noBillFlights.length + " flight(s) marked 'No Bill' (included at $0):\n" +
         noBillFlights.map(f => '  ' + f.pilot + ' — ' + f.date + ' ' + f.glider +
           (f.remarks ? ' (' + f.remarks + ')' : '')).join('\n');
     }
+
     return { iif: iif, count: eligible.length, batchId: batchId, summary: summary };
 
   } catch (e) {
@@ -165,11 +166,6 @@ let summary = '';
 
 /**
  * Build IIF text (tab-delimited) from generic invoices.
- *
- * One TRNS (invoice header, posts to AR), one SPL per line item
- * (posts to income account, negative amount), then ENDTRNS.
- * TRNS.AMOUNT = sum of SPL amounts (sign-flipped), so the
- * transaction balances even for AEF's all-zero invoices.
  */
 function buildReckonIIF(invoices, issueDateISO) {
   const date = formatIIFDate(issueDateISO);
@@ -182,8 +178,6 @@ function buildReckonIIF(invoices, issueDateISO) {
   lines.push('!ENDTRNS');
 
   invoices.forEach(invoice => {
-    // Reference holds the actual pilot for AEF/Visitor groups
-    // (where customer is 'AEF' or 'Visitor') - keep that context in MEMO.
     const memo = invoice.reference
       ? `${invoice.description} - Ref: ${invoice.reference}`
       : invoice.description;
@@ -217,17 +211,11 @@ function buildReckonIIF(invoices, issueDateISO) {
   return lines.join('\n');
 }
 
-/**
- * Convert yyyy-MM-dd to MM/dd/yyyy (IIF requires US date format).
- */
 function formatIIFDate(isoDate) {
   const [y, m, d] = isoDate.split('-');
   return `${m}/${d}/${y}`;
 }
 
-/**
- * Format a number as a fixed 2dp string, normalising -0 to 0.00.
- */
 function formatIIFAmount(n) {
   const v = Number(n) || 0;
   return (v === 0 ? 0 : v).toFixed(2);
