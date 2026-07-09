@@ -71,6 +71,7 @@ function generateReckonExport() {
     flightCount: eligible.length
   });
 
+  const noBillFlights = eligible.filter(f => f.payer === 'No Bill');
   return { iif, batchId, eligible, flights, exported };
 }
 
@@ -112,6 +113,14 @@ function runReckonExport() {
       `See AuditLog for details.`
     );
   }
+  if (noBillFlights.length > 0) {
+    const list = noBillFlights
+      .map(f => `  ${f.pilot} — ${f.date} ${f.glider}${f.remarks ? ' (' + f.remarks + ')' : ''}`)
+      .join('\n');
+    SpreadsheetApp.getUi().alert(
+      `${noBillFlights.length} flight(s) marked 'No Bill' were included at $0:\n\n${list}`
+    );
+  }
 }
 
 /**
@@ -141,8 +150,13 @@ function runReckonExportFromWebapp(password) {
     DriveApp.createFile(
       Utilities.newBlob(iif, 'text/plain', 'ReckonExport_' + batchId + '.iif')
     );
-
-    return { iif: iif, count: eligible.length, batchId: batchId };
+let summary = '';
+    if (noBillFlights.length > 0) {
+      summary = noBillFlights.length + " flight(s) marked 'No Bill' (included at $0):\n" +
+        noBillFlights.map(f => '  ' + f.pilot + ' — ' + f.date + ' ' + f.glider +
+          (f.remarks ? ' (' + f.remarks + ')' : '')).join('\n');
+    }
+    return { iif: iif, count: eligible.length, batchId: batchId, summary: summary };
 
   } catch (e) {
     return { error: e.message };
