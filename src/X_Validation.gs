@@ -28,7 +28,7 @@ const X_Validation = (() => {
 
   function validateConfig() {
     const mode = Config.get('TOW_BILLING');
-    if (!['ALT', 'TIME'].includes(mode)) {
+    if (![TOW_BILLING_MODE.ALT, TOW_BILLING_MODE.TIME].includes(mode)) {
       throw new Error('Invalid TOW_BILLING');
     }
     Config.getNumber('MIN_ALT');
