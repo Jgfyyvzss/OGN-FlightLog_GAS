@@ -23,7 +23,7 @@
 // preserve: if true, writeFlightToSheet will NOT overwrite this column when
 //           updating an existing row (pilot-entered data is protected).
 
-const FLIGHT_LOG_SHEET_NAME = 'FlightLog';
+ const sheet = ss.getSheetByName(sheetName || FLIGHT_LOG_SHEET_NAME);
 
 const SCHEMA = [
   { col:  1, header: 'FlightKey',    field: 'flightKey',    norm: 'key'          },
