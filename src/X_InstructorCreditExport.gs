@@ -108,7 +108,7 @@ function generateInstructorCreditExport() {
   const eligible = flights.filter(f =>
     f.pilot &&
     f.pax &&
-    (f.payer === 'Student' || f.payer === 'AEF') &&
+    (f.payer === '' || f.payer === PAYER.AEF) &&
     !creditExported.has(f.key) &&
     (gateDisabled || flightExported.has(f.key))
   );
