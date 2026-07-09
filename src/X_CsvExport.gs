@@ -24,7 +24,7 @@ const _BillingCsvDef = {
     const aerotowMode = Costs.aefAerotowMode();
 
     eligible.forEach(f => {
-      const isAEF = f.payer === 'AEF';
+      const isAEF = f.payer === PAYER.AEF;
       const lines = Invoicing.buildFlightLines(f, 1.0, { isAEF, aerotowMode });
 
       lines.forEach(line => {
