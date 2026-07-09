@@ -87,7 +87,7 @@ function getWebappData() {
  */
 function getFlightsForWebapp() {
   const config = getConfig();
-  const sheetName = config.SHEET_NAME;
+  const sheetName = FLIGHT_LOG_SHEET_NAME;
   const timezone = config.TIMEZONE;
 
   const now = new Date();
@@ -411,6 +411,7 @@ function updateFlight(flightData) {
     sheet.getRange(sheetRow, cols.Payer).setValue(flightData.payer || "");
     // TowPilot: receives either the aerotow tug pilot or the winch driver
     sheet.getRange(sheetRow, cols.TowPilot).setValue(flightData.towPilot || "");
+    sheet.getRange(sheetRow, cols.Remarks).setValue(String(flightData.remarks || '').slice(0, 80));
     sheet.getRange(sheetRow, cols.Timestamp).setValue(new Date());
 
     return { success: true, message: "Flight updated successfully!" };
