@@ -61,7 +61,8 @@ const Flights = (() => {
       towType:    r.TowType,
       towPilot:   r.TowPilot || '',             // covers both tug pilot and winch driver
       visitor:    r.Visitor    === 'Y',
-      paxVisitor: r.PaxVisitor === 'Y'
+      paxVisitor: r.PaxVisitor === 'Y',
+      remarks:    r.Remarks || ''
     };
   }
 
