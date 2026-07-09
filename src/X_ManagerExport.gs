@@ -75,6 +75,7 @@ function generateManagerExport() {
     flightCount: eligible.length
   });
 
+  const noBillFlights = eligible.filter(f => f.payer === 'No Bill');
   return { tsv, batchId, eligible, flights, exported };
 }
 
