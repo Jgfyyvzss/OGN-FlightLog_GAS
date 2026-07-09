@@ -21,8 +21,6 @@
  * Credit exports are shown regardless (accounting-system agnostic for now).
  */
 
-const EXPORT_ID = 'manager_csv';
-
 /**
  * Core export logic - shared by menu and webapp invocations
  */
@@ -44,8 +42,8 @@ function generateManagerExport() {
   const flights = Flights.load();
   X_Validation.validateFlights(flights);
 
-  const ignorePilot = getConfigValue('IGNORE_PILOT', false) || 'Z_IGNORE';
-  const exported = X_ExportState.exportedKeys(EXPORT_ID);
+  const ignorePilot = getConfigValue('IGNORE_PILOT', false) || IGNORE_PILOT_DEFAULT;
+  const exported = X_ExportState.exportedKeys(MANAGER_EXPORT_ID);
 
   const eligible = flights.filter(f =>
     !exported.has(f.key) &&
@@ -65,18 +63,19 @@ function generateManagerExport() {
   ).join('\n');
 
   X_ExportState.markExported(
-    EXPORT_ID,
+    MANAGER_EXPORT_ID,
     batchId,
     eligible.map(f => f.key)
   );
 
-  X_Audit.log('EXPORT_SUCCESS', EXPORT_ID, batchId, {
+  X_Audit.log('EXPORT_SUCCESS', MANAGER_EXPORT_ID, batchId, {
     pilotCount: invoices.length,
     flightCount: eligible.length
   });
 
-  const noBillFlights = eligible.filter(f => f.payer === 'No Bill');
-  return { tsv, batchId, eligible, flights, exported };
+  const noBillFlights = eligible.filter(f => f.payer === PAYER.NO_BILL);
+
+  return { tsv, batchId, eligible, flights, exported, noBillFlights };
 }
 
 /**
@@ -92,22 +91,17 @@ function runManagerExport() {
     'AEF_AEROTOW_MODE'
   ]);
 
-  X_Audit.log('EXPORT_START', EXPORT_ID);
+  X_Audit.log('EXPORT_START', MANAGER_EXPORT_ID);
 
-const { tsv, batchId, eligible, noBillFlights } = generateManagerExport();
+  const { tsv, batchId, flights, exported, noBillFlights } = generateManagerExport();
 
-    DriveApp.createFile(
-      Utilities.newBlob(tsv, 'text/csv', 'ManagerExport_' + batchId + '.csv')
-    );
+  const blob = Utilities.newBlob(
+    tsv,
+    'text/csv',
+    `ManagerExport_${batchId}.csv`
+  );
 
-    let summary = '';
-    if (noBillFlights.length > 0) {
-      summary = noBillFlights.length + " flight(s) marked 'No Bill' (included at $0):\n" +
-        noBillFlights.map(f => '  ' + f.pilot + ' — ' + f.date + ' ' + f.glider +
-          (f.remarks ? ' (' + f.remarks + ')' : '')).join('\n');
-    }
-
-    return { tsv: tsv, count: eligible.length, batchId: batchId, summary: summary };
+  DriveApp.createFile(blob);
 
   const skipped = flights.filter(f =>
     !f.pilot && !exported.has(f.key)
@@ -121,6 +115,7 @@ const { tsv, batchId, eligible, noBillFlights } = generateManagerExport();
       `See AuditLog for details.`
     );
   }
+
   if (noBillFlights.length > 0) {
     const list = noBillFlights
       .map(f => `  ${f.pilot} — ${f.date} ${f.glider}${f.remarks ? ' (' + f.remarks + ')' : ''}`)
