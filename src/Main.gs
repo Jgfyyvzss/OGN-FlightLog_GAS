@@ -7,24 +7,23 @@
 /**
  * Smart fetch - try API first, fall back to HTML
  * @param {string} dateStr - Date in yyyy-mm-dd format, or blank for today
- * @param {string} targetSheet - Sheet name (defaults to config)
+ * @param {string} targetSheet - Sheet name (defaults to FLIGHT_LOG_SHEET_NAME)
  */
 function smartFetchFlights(dateStr, targetSheet) {
-  const config = getConfig();
   const sheetName = targetSheet || FLIGHT_LOG_SHEET_NAME;
-  
+
   // Initialize sheet if needed
   const sheet = initializeSheet(sheetName);
-  
+
   const isoDate = dateStr || getTodayISO();
-  
+
   Logger.log("=== Smart Fetch for " + isoDate + " ===");
-  
+
   // Try API first
   try {
     Logger.log("Attempting API fetch...");
     const result = fetchFlightsFromAPI(isoDate, sheetName);
-    
+
     if (result.success && result.count > 0) {
       Logger.log("✓ API fetch successful: " + result.count + " flights");
       return result;
@@ -35,12 +34,12 @@ function smartFetchFlights(dateStr, targetSheet) {
     Logger.log("API fetch failed: " + apiError.message);
     Logger.log("Falling back to HTML scraper...");
   }
-  
+
   // Fall back to HTML
   try {
     Logger.log("Attempting HTML scrape...");
     const result = fetchFlightsFromHTML(isoDate, sheetName);
-    
+
     if (result.success) {
       Logger.log("✓ HTML scrape successful: " + result.count + " flights");
       return result;
@@ -71,7 +70,7 @@ function onOpen() {
         .addItem("Test API", "testAPIToday")
         .addItem("Test HTML", "testHTMLToday")
     );
-  
+
   // Export submenu
   try {
     const exportMenu = ui.createMenu("Exports");
@@ -86,7 +85,7 @@ function onOpen() {
   } catch (error) {
     Logger.log("Export registry not available: " + error.toString());
   }
-  
+
   flightLogMenu.addToUi();
 }
 
@@ -102,6 +101,6 @@ function testSmartFetchToday() {
  * Test smart fetch with specific date
  */
 function testSmartFetchDate() {
-  const result = smartFetchFlights("2025-12-29", "FlightLog");
+  const result = smartFetchFlights("2025-12-29", FLIGHT_LOG_SHEET_NAME);
   Logger.log("Final result: " + JSON.stringify(result));
 }
