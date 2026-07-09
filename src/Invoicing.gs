@@ -35,7 +35,7 @@ const Invoicing = (() => {
    * would add another entry here.
    */
   function payerPriceMultiplier(payer) {
-    if (payer === 'AEF' || payer === 'No Bill') return 0;
+    if (payer === PAYER.AEF || payer === PAYER.NO_BILL) return 0;
     return 1;
   }
 
@@ -50,7 +50,7 @@ const Invoicing = (() => {
     flights.forEach(f => {
       const payer = f.payer || 'Pilot';
 
-      if (payer === 'Shared' && splitBillingOn) {
+      if (payer === PAYER.SHARED && splitBillingOn) {
         const pilotKey = `PILOT_${f.pilot}`;
         const paxKey = `PAX_${f.pax}`;
 
@@ -74,7 +74,7 @@ const Invoicing = (() => {
         }
         groups.get(paxKey).flights.push(f);
 
-      } else if (payer === 'AEF') {
+      } else if (payer === PAYER.AEF) {
         const aefKey = `AEF_${f.pilot}`;
         if (!groups.has(aefKey)) {
           groups.set(aefKey, {
@@ -172,19 +172,19 @@ const Invoicing = (() => {
     // AEF + in-house tow provision: no external aerotow cost to track,
     // so treat the launch like a winch launch instead of an AT line.
     const treatAerotowAsWinch =
-      context.isAEF && context.aerotowMode === 'INHOUSE' && !!flight.towPlane;
+      context.isAEF && context.aerotowMode === AEROTOW_MODE.INHOUSE && !!flight.towPlane;
 
     if (flight.towPlane && !treatAerotowAsWinch) {
 
       const towBilling = Config.get('TOW_BILLING');
 
       const towQty =
-        towBilling === 'ALT'
+        towBilling === TOW_BILLING_MODE.ALT
           ? (flight.towAlt || 0)
           : _floorMinutes(flight.planeTime);
 
       const towRate =
-        towBilling === 'ALT'
+        towBilling === TOW_BILLING_MODE.ALT
           ? Costs.towRateAlt()
           : Costs.towRateTime();
 
