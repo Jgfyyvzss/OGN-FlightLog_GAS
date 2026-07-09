@@ -120,7 +120,7 @@ function getFlightsForWebapp() {
  * @param {string} paxVisitor    - 'Y' or ''
  * @param {string} winchDriver   - name or '' (writes to TowPilot)
  */
-function submitPilotData(flightKey, pilot, pax, payer, pilotVisitor, paxVisitor, winchDriver) {
+function submitPilotData(flightKey, pilot, pax, payer, pilotVisitor, paxVisitor, winchDriver, remarks) {
   try {
     if (!flightKey || !pilot) {
       return { success: false, message: "Flight and Pilot are required" };
@@ -163,6 +163,9 @@ function submitPilotData(flightKey, pilot, pax, payer, pilotVisitor, paxVisitor,
     // so that aerotow TowPilot set via Edit Tugs is not accidentally cleared.
     if (winchDriver !== undefined && winchDriver !== null) {
       sheet.getRange(sheetRow, cols.TowPilot).setValue(winchDriver);
+    }
+     if (remarks !== undefined) {
+      sheet.getRange(sheetRow, cols.Remarks).setValue(String(remarks || '').slice(0, 80));
     }
 
     return { success: true, message: "Flight log updated successfully!" };
