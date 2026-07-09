@@ -41,7 +41,7 @@ const SCHEMA = [
   { col: 13, header: 'TowMaxAlt',    field: 'towMaxAlt',    norm: 'towAlt'       },
   { col: 14, header: 'PlaneLanding', field: 'pLanding',     norm: 'pLanding'     },
   { col: 15, header: 'PlaneTime',    field: 'pTime',        norm: 'planeTime'    },
-  { col: 16, header: 'Remarks',      field: 'remarks'                            },
+  { col: 16, header: 'Remarks',      field: 'remarks',      norm: 'remarks',     preserve: true },
   { col: 17, header: 'Visitor',      field: 'pilotVisitor', norm: 'visitor',     preserve: true },
   { col: 18, header: 'Pilot',        field: 'pilot',        norm: 'pilot',       preserve: true },
   { col: 19, header: 'PaxVisitor',   field: 'paxVisitor',   norm: 'paxVisitor',  preserve: true },
