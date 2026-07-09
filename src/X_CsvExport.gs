@@ -1,15 +1,15 @@
 /**
  * X_CsvExport.gs - Billing CSV Export
  *
- * Produces a flat CSV with one row per billing line item.
- * Useful for internal review and reconciliation.
+ * Produces a flat CSV with one row per billing line item, per raw flight
+ * (not grouped/split by customer - useful for physical flight-by-flight
+ * reconciliation). Uses the same Invoicing.buildFlightLines() logic as the
+ * Manager and Reckon exports, so figures always match.
  *
  * Output columns:
- *   BatchID, Pilot, FlightKey, FlightDate, Glider, LaunchType,
- *   BillingStatus, LineType, Quantity, Amount, Notes
+ *   BatchID, Pilot, FlightKey, FlightDate, Glider, Payer,
+ *   LineItem, LineDescription, Qty, UnitPrice, Amount, Division
  */
-
-// ── Export definition ─────────────────────────────────────────────────────────
 
 const _BillingCsvDef = {
 
@@ -17,29 +17,31 @@ const _BillingCsvDef = {
 
   menuName: 'Export Billing (CSV)',
 
-  requiredCosts: ['WINCH_FEE', 'TOW_RATE_TIME', 'TOW_RATE_ALT'],
+  requiredCosts: ['WINCH_FEE', 'WINCH_FEE_VISITOR', 'TOW_RATE_TIME', 'TOW_RATE_ALT', 'AEF_AEROTOW_MODE'],
 
   buildOutput(eligible, { batchId }) {
     const rows = [_billingCsvHeader()];
+    const aerotowMode = Costs.aefAerotowMode();
 
     eligible.forEach(f => {
-      const launchType    = Billing.classifyLaunch(f);
-      const billingStatus = f.maxAlt < Config.getNumber('MIN_ALT') ? 'ZERO' : 'NORMAL';
-      const lines         = Billing.billFlight(f);
+      const isAEF = f.payer === 'AEF';
+      const lines = Invoicing.buildFlightLines(f, 1.0, { isAEF, aerotowMode });
 
       lines.forEach(line => {
+        const amount = (Number(line.qty) * Number(line.unitPrice)).toFixed(2);
         rows.push([
           batchId,
           f.pilot,
           f.key,
           f.date,
           f.glider,
-          launchType,
-          billingStatus,
-          line.type,
-          _deriveQuantity(line, f),
-          line.amount,
-          _buildLineNote(line, f, billingStatus)
+          f.payer || '',
+          line.item,
+          line.description,
+          line.qty,
+          line.unitPrice,
+          amount,
+          line.division
         ]);
       });
     });
@@ -53,37 +55,16 @@ const _BillingCsvDef = {
 
 };
 
-// ── Entry point ───────────────────────────────────────────────────────────────
-
 function runBillingCsvExport() {
   X_ExportBase.run(_BillingCsvDef);
 }
 
-// ── Private helpers ───────────────────────────────────────────────────────────
-
 function _billingCsvHeader() {
   return [
-    'BatchID', 'Pilot', 'FlightKey', 'FlightDate', 'Glider',
-    'LaunchType', 'BillingStatus', 'LineType', 'Quantity', 'Amount', 'Notes'
+    'BatchID', 'Pilot', 'FlightKey', 'FlightDate', 'Glider', 'Payer',
+    'LineItem', 'LineDescription', 'Qty', 'UnitPrice', 'Amount', 'Division'
   ];
 }
-
-function _deriveQuantity(line, f) {
-  switch (line.type) {
-    case 'GLIDER_TIME':   return f.flightTime;
-    case 'AERO_TOW':      return Config.get('TOW_BILLING') === 'ALT' ? f.towAlt : f.planeTime;
-    case 'WINCH_LAUNCH':  return 1;
-    default:              return '';
-  }
-}
-
-function _buildLineNote(line, f, billingStatus) {
-  let note = `${line.type} – ${f.glider}`;
-  if (billingStatus === 'ZERO') note += ' (Aborted launch)';
-  return note;
-}
-
-// ── Register in menu ──────────────────────────────────────────────────────────
 
 X_ExportRegistry.register({
   name: _BillingCsvDef.menuName,
