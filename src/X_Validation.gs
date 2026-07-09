@@ -14,7 +14,14 @@ const X_Validation = (() => {
   );
 }
       if (!f.glider) throw new Error(`Missing Glider for ${f.key}`);
-      if (f.flightTime <= 0) throw new Error(`Invalid FlightTime for ${f.key}`);
+      if (f.flightTime <= 0) {
+        X_Audit.log(
+          'WARNING',
+          'validation',
+          '',
+          { notes: `FlightTime is zero — will bill at MIN_BILLABLE_MINUTES: ${f.key}` }
+        );
+      }
       if (isNaN(f.maxAlt)) throw new Error(`Invalid MaxAlt for ${f.key}`);
     });
   }
