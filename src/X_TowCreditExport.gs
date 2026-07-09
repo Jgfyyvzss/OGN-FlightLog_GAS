@@ -101,15 +101,13 @@ function generateTowCreditExport() {
   const flights = Flights.load();
   const creditExported = X_ExportState.exportedKeys(TOW_CREDIT_EXPORT_ID);
 
-  // Gate: only credit flights that have been invoiced (manager_csv exported)
+  // Gate: only credit flights that have been invoiced (Manager exported)
   // unless the gate is explicitly disabled in Config.
-  const gateDisabled = (() => {
-    try { return Config.get('CREDIT_GATE') === 'OFF'; } catch (e) { return false; }
-  })();
+  const gateDisabled = X_ExportBase.isCreditGateDisabled();
 
   const flightExported = gateDisabled
     ? null
-    : X_ExportState.exportedKeys('manager_csv');
+    : X_ExportState.exportedKeys(MANAGER_EXPORT_ID);
 
   // Eligible: has TowPilot, not yet credited, and (if gate on) already invoiced
   const eligible = flights.filter(f =>
