@@ -94,7 +94,7 @@ function runManagerExport() {
 
   X_Audit.log('EXPORT_START', EXPORT_ID);
 
-  const { tsv, batchId, flights, exported } = generateManagerExport();
+  const { tsv, batchId, flights, exported, noBillFlights } = generateManagerExport();
 
   const blob = Utilities.newBlob(
     tsv,
@@ -114,6 +114,14 @@ function runManagerExport() {
       `Reason: Missing Pilot assignment.\n` +
       `These flights were NOT exported.\n\n` +
       `See AuditLog for details.`
+    );
+  }
+  if (noBillFlights.length > 0) {
+    const list = noBillFlights
+      .map(f => `  ${f.pilot} — ${f.date} ${f.glider}${f.remarks ? ' (' + f.remarks + ')' : ''}`)
+      .join('\n');
+    SpreadsheetApp.getUi().alert(
+      `${noBillFlights.length} flight(s) marked 'No Bill' were included at $0:\n\n${list}`
     );
   }
 }
