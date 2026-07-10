@@ -19,9 +19,10 @@ const FLIGHT_LOG_SHEET_NAME = 'FlightLog';
 
 // "Special Billing" (Payer field) values.
 const PAYER = {
-  AEF:     'AEF',
-  SHARED:  'Shared',
-  NO_BILL: 'No Bill'
+  AEF:         'AEF',
+  SHARED:      'Shared',
+  NO_BILL:     'No Charge',
+  SELF_LAUNCH: 'Self Launch'
 };
 
 // Manager.io invoice export ID - referenced by X_ManagerExport.gs itself,
