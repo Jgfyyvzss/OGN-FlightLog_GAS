@@ -6,14 +6,17 @@
  *   { customer, reference, description, lines: [{item, description, qty, unitPrice, division}] }
  *
  * Special Billing (Payer field) values:
- *   ''         - default: Pilot pays in full
- *   'AEF'      - pre-paid voucher: qty preserved for record-keeping, price forced to $0
- *   'Shared'   - split 50/50 between Pilot and Pax, only when Config SPLIT_BILLING = 'ON'
- *                (falls through to default "Pilot pays" when off)
- *   'No Bill'  - qty preserved, price forced to $0 (manual override, e.g. cable break,
- *                training/review flight normally billable but waived)
+ *   ''             - default: Pilot pays in full
+ *   'AEF'          - pre-paid voucher: qty preserved for record-keeping, price forced to $0
+ *   'Shared'       - split 50/50 between Pilot and Pax, only when Config SPLIT_BILLING = 'ON'
+ *                    (falls through to default "Pilot pays" when off)
+ *   'No Charge'    - qty preserved, price forced to $0 (manual override, e.g. cable break,
+ *                    training/review flight normally billable but waived)
+ *   'Self Launch'  - no tow plane involved; suppresses the AT/WL launch line entirely.
+ *                    Flight-time line still bills normally (club gliders bill per
+ *                    Costs rate, private gliders already resolve to $0 via gliderRate).
  *
- * AEF and No Bill share one mechanism: payerPriceMultiplier() returns 0 for both,
+ * AEF and No Charge share one mechanism: payerPriceMultiplier() returns 0 for both,
  * applied uniformly to every line a flight generates. This replaces the old approach
  * of forcing AEF lines to $0.00 after the fact.
  *
@@ -23,14 +26,14 @@
  * raw FlightTime stored in the sheet - it only affects the billing calculation.
  *
  * Remarks: appended (truncated to 80 chars) to each line's description, so
- * context set by the exporter (e.g. reason for No Bill) is visible on the
+ * context set by the exporter (e.g. reason for No Charge) is visible on the
  * invoice/CSV line itself.
  */
 const Invoicing = (() => {
 
   /**
    * Price multiplier for a flight, driven by Payer.
-   * AEF and No Bill both zero the price while preserving qty.
+   * AEF and No Charge both zero the price while preserving qty.
    * Extension point: future tiered rates (e.g. a partial-rate launch category)
    * would add another entry here.
    */
@@ -93,7 +96,7 @@ const Invoicing = (() => {
 
       } else {
         // Default: Pilot pays. Covers blank, 'Shared' when split billing is off,
-        // 'No Bill' (grouping unaffected - only price is zeroed), and any other value.
+        // 'No Charge' and 'Self Launch' (grouping unaffected), and any other value.
         const pilotKey = f.visitor ? `VISITOR_${f.pilot}` : `PILOT_${f.pilot}`;
         if (!groups.has(pilotKey)) {
           groups.set(pilotKey, {
@@ -124,11 +127,8 @@ const Invoicing = (() => {
   }
 
   function countFlightLines(flight) {
-    let count = 1;
-    if (flight.towPlane || flight.towType === 'Winch' || (!flight.towPlane && flight.maxAlt > 0)) {
-      count++;
-    }
-    return count;
+    if (flight.payer === PAYER.SELF_LAUNCH) return 1;
+    return 2;
   }
 
   /** Append truncated remarks to a base line description, if present. */
@@ -174,7 +174,10 @@ const Invoicing = (() => {
     const treatAerotowAsWinch =
       context.isAEF && context.aerotowMode === AEROTOW_MODE.INHOUSE && !!flight.towPlane;
 
-    if (flight.towPlane && !treatAerotowAsWinch) {
+    if (flight.payer === PAYER.SELF_LAUNCH) {
+      // No launch line at all — flight time already billed above.
+
+    } else if (flight.towPlane && !treatAerotowAsWinch) {
 
       const towBilling = Config.get('TOW_BILLING');
 
@@ -196,11 +199,13 @@ const Invoicing = (() => {
         division: division
       });
 
-    } else if (
-      treatAerotowAsWinch ||
-      flight.towType === 'Winch' ||
-      (!flight.towPlane && flight.maxAlt > 0)
-    ) {
+    } else {
+      // No tow plane (or AEF in-house tow folded in here) — bills as a winch
+      // launch by default. MaxAlt is deliberately NOT used as a gate: it is
+      // frequently unknown (HTML-scraper fallback never populates it) and
+      // treating "unknown" as "didn't launch" silently dropped real winch
+      // launches from billing. Waiving a genuine failed/aborted launch is a
+      // human call — use the 'No Charge' Special Billing override for that.
 
       const winchRate = flight.visitor ? Costs.winchFeeVisitor() : Costs.winchFee();
 
