@@ -46,7 +46,7 @@ const Flights = (() => {
       pilot:      r.Pilot,
       glider:     r.Glider,
       flightTime: parseDuration(r.FlightTime),
-      maxAlt:     Number(r.MaxAlt) || 0,
+       maxAlt:     r.MaxAlt === '' ? null : (Number(r.MaxAlt) || 0),
       maxHeight:  Number(r.MaxHeight) || 0,    // metres AGL — used for Tow Height in SGGC export
       towPlane:   r.TowPlane,
       towAlt:     Number(r.TowMaxAlt) || 0,
