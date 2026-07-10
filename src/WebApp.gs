@@ -38,22 +38,29 @@ function runManagerExportFromWebapp(password) {
     return { error: 'Incorrect password.' };
   }
 
-  try {
+try {
     Costs.assertConfigured([
       'WINCH_FEE',
       'TOW_RATE_TIME',
       'TOW_RATE_ALT',
       'AEF_AEROTOW_MODE'
     ]);
-    X_Audit.log('EXPORT_START', EXPORT_ID);
+    X_Audit.log('EXPORT_START', MANAGER_EXPORT_ID);
 
-    const { tsv, batchId, eligible } = generateManagerExport();
+    const { tsv, batchId, eligible, noBillFlights } = generateManagerExport();
 
     DriveApp.createFile(
       Utilities.newBlob(tsv, 'text/csv', 'ManagerExport_' + batchId + '.csv')
     );
 
-    return { tsv: tsv, count: eligible.length, batchId: batchId };
+    let summary = '';
+    if (noBillFlights.length > 0) {
+      summary = noBillFlights.length + " flight(s) marked 'No Bill' (included at $0):\n" +
+        noBillFlights.map(f => '  ' + f.pilot + ' — ' + f.date + ' ' + f.glider +
+          (f.remarks ? ' (' + f.remarks + ')' : '')).join('\n');
+    }
+
+    return { tsv: tsv, count: eligible.length, batchId: batchId, summary: summary };
 
   } catch (e) {
     return { error: e.message };
