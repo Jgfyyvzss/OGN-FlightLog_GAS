@@ -97,7 +97,7 @@ const X_ExportBase = (() => {
 
     const eligible = def.filterEligible
       ? def.filterEligible(allFlights, exported)
-      : _defaultFilter(allFlights, exported);
+      : eligibleFlights(allFlights, exported);
 
     if (eligible.length === 0) {
       throw new Error('No eligible flights to export for ' + def.id +

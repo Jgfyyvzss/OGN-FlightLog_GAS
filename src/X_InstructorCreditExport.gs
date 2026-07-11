@@ -105,8 +105,11 @@ function generateInstructorCreditExport() {
 
   // Eligible: Pilot & Pax populated, Payer is blank (default) or AEF,
   // not yet credited, and (if gate on) already invoiced.
+  const ignorePilot = getConfigValue('IGNORE_PILOT', false) || IGNORE_PILOT_DEFAULT;
+
   const eligible = flights.filter(f =>
     f.pilot &&
+    f.pilot !== ignorePilot &&
     f.pax &&
     (f.payer === '' || f.payer === PAYER.AEF) &&
     !creditExported.has(f.key) &&

@@ -115,6 +115,60 @@ function getFlightsForWebapp() {
 }
 
 /**
+ * Merge away a duplicate/orphan flight row without deleting it.
+ *
+ * Reads back the fields worth carrying over from the row at mergeFlightKey,
+ * then marks that row's Pilot as the ignore-placeholder and blanks its
+ * other people/billing fields. The row is left in place (Glider, Date,
+ * TakeOff, TowPlane etc. untouched) so a future fetch regenerates the same
+ * FlightKey, finds the existing row, and updates it - Pilot is a `preserve`
+ * column (see DataWriter SCHEMA), so the ignore marker survives every
+ * subsequent refresh with no extra tracking needed.
+ *
+ * @param {Sheet} sheet
+ * @param {Object} cols - column map from getColumnMap()
+ * @param {string} mergeFlightKey - FlightKey of the row being merged away
+ * @returns {{towPlane,towType,towMaxAlt,pLanding,pTime,towPilot}} fields
+ *          captured from the merged-away row, or all-blank if not found
+ */
+function _mergeAwayRow(sheet, cols, mergeFlightKey) {
+  const empty = { towPlane: "", towType: "", towMaxAlt: "", pLanding: "", pTime: "", towPilot: "" };
+  if (!mergeFlightKey) return empty;
+
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return empty;
+
+  const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
+  const rowIndex = data.findIndex(row => row[0] === mergeFlightKey);
+  if (rowIndex === -1) return empty;
+
+  const row = data[rowIndex];
+  const captured = {
+    towPlane:  row[cols.TowPlane - 1]     || "",
+    towType:   row[cols.TowType - 1]      || "",
+    towMaxAlt: row[cols.TowMaxAlt - 1]    || "",
+    pLanding:  row[cols.PlaneLanding - 1] || "",
+    pTime:     row[cols.PlaneTime - 1]    || "",
+    towPilot:  row[cols.TowPilot - 1]     || ""
+  };
+
+  const sheetRow = rowIndex + 2;
+  const ignorePilot = getConfigValue('IGNORE_PILOT', false) || IGNORE_PILOT_DEFAULT;
+
+  sheet.getRange(sheetRow, cols.Pilot).setValue(ignorePilot);
+  sheet.getRange(sheetRow, cols.Visitor).setValue("");
+  sheet.getRange(sheetRow, cols.Pax).setValue("");
+  sheet.getRange(sheetRow, cols.PaxVisitor).setValue("");
+  sheet.getRange(sheetRow, cols.Payer).setValue("");
+  sheet.getRange(sheetRow, cols.TowPilot).setValue("");
+  sheet.getRange(sheetRow, cols.Remarks).setValue("");
+  sheet.getRange(sheetRow, cols.Timestamp).setValue(new Date());
+
+  Logger.log("Merged away row (marked ignore): " + mergeFlightKey);
+  return captured;
+}
+
+/**
  * Submit pilot data from the main webapp form.
  * winchDriver writes to TowPilot column (a flight cannot be both aerotow and winch).
  *
@@ -220,25 +274,13 @@ function addManualGliderFlight(flightData) {
 
     if (flightData.tugFlightKey) {
       const cols = getColumnMap(sheet);
-      const lastRow = sheet.getLastRow();
-      if (lastRow >= 2) {
-        const data = sheet.getRange(2, 1, lastRow - 1, sheet.getLastColumn()).getValues();
-        const tugRowIndex = data.findIndex(row => row[0] === flightData.tugFlightKey);
-
-        if (tugRowIndex >= 0) {
-          const tugRow = data[tugRowIndex];
-          towPlane  = tugRow[cols.TowPlane - 1]    || "";
-          towType   = tugRow[cols.TowType - 1]      || "";
-          towMaxAlt = tugRow[cols.TowMaxAlt - 1]    || "";
-          pLanding  = tugRow[cols.PlaneLanding - 1] || "";
-          pTime     = tugRow[cols.PlaneTime - 1]    || "";
-          towPilot  = tugRow[cols.TowPilot - 1]     || "";
-
-          const tugSheetRow = tugRowIndex + 2;
-          sheet.deleteRow(tugSheetRow);
-          Logger.log("Deleted orphan tug row: " + flightData.tugFlightKey);
-        }
-      }
+      const merged = _mergeAwayRow(sheet, cols, flightData.tugFlightKey);
+      towPlane  = merged.towPlane;
+      towType   = merged.towType;
+      towMaxAlt = merged.towMaxAlt;
+      pLanding  = merged.pLanding;
+      pTime     = merged.pTime;
+      towPilot  = merged.towPilot;
     }
 
     // winchDriver from form overrides towPilot only if provided and no tug was merged
@@ -375,6 +417,12 @@ function updateFlight(flightData) {
     }
 
     const cols = getColumnMap(sheet);
+
+    let mergedTow = { towPlane: "", towType: "", towMaxAlt: "", pLanding: "", pTime: "", towPilot: "" };
+    if (flightData.mergeFlightKey) {
+      mergedTow = _mergeAwayRow(sheet, cols, flightData.mergeFlightKey);
+    }
+
     const lastRow = sheet.getLastRow();
     if (lastRow < 2) {
       return { success: false, message: "No flights in sheet" };
@@ -416,7 +464,14 @@ function updateFlight(flightData) {
     sheet.getRange(sheetRow, cols.Pax).setValue(flightData.pax || "");
     sheet.getRange(sheetRow, cols.Payer).setValue(flightData.payer || "");
     // TowPilot: receives either the aerotow tug pilot or the winch driver
-    sheet.getRange(sheetRow, cols.TowPilot).setValue(flightData.towPilot || "");
+    sheet.getRange(sheetRow, cols.TowPilot).setValue(flightData.towPilot || mergedTow.towPilot || "");
+    if (mergedTow.towPlane) {
+      sheet.getRange(sheetRow, cols.TowPlane).setValue(mergedTow.towPlane);
+      sheet.getRange(sheetRow, cols.TowType).setValue(mergedTow.towType);
+      sheet.getRange(sheetRow, cols.TowMaxAlt).setValue(mergedTow.towMaxAlt);
+      sheet.getRange(sheetRow, cols.PlaneLanding).setValue(mergedTow.pLanding);
+      sheet.getRange(sheetRow, cols.PlaneTime).setValue(mergedTow.pTime);
+    }
     sheet.getRange(sheetRow, cols.Remarks).setValue(String(flightData.remarks || '').slice(0, 80));
     sheet.getRange(sheetRow, cols.Timestamp).setValue(new Date());
 

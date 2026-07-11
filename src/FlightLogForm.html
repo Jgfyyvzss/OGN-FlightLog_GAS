@@ -561,6 +561,12 @@
 
         <div class="section-header">Tug / Winch Information</div>
         <div class="info-text" id="editTugInfo">No tug assigned</div>
+        <div class="form-group" id="editMergeGroup" style="display:none;">
+          <label>Merge with Duplicate Record</label>
+          <select id="editMergeSelect">
+            <option value="">None</option>
+          </select>
+        </div>
 
         <!-- Tug Pilot (aerotow) -->
         <div class="form-group toggle-field" id="tf-editTugPilot">
@@ -1008,16 +1014,21 @@
     function openModal(id)  { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-    function populateAvailableTugs() {
-      var sel = document.getElementById('addGliderTugSelect');
-      sel.innerHTML = '<option value="">Select available tug flight...</option>';
-      flights.filter(function(f) { return f.towPlane && !f.glider; }).forEach(function(tug) {
-        var opt = document.createElement('option');
-        opt.value = tug.flightKey;
-        opt.textContent = tug.towPlane + ' - ' + tug.takeOff + (tug.towPilot ? ' (' + tug.towPilot + ')' : '');
-        sel.appendChild(opt);
-      });
-    }
+    function populateMergeCandidates(selectId, excludeFlightKey) {
+  var sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.innerHTML = '<option value="">None</option>';
+  flights
+    .filter(function(f) { return !f.pilot && f.flightKey !== excludeFlightKey; })
+    .forEach(function(f) {
+      var opt = document.createElement('option');
+      opt.value = f.flightKey;
+      var label = (f.glider || f.towPlane || '(unknown)') + ' - ' + (f.takeOff || '');
+      if (f.towPilot) label += ' (' + f.towPilot + ')';
+      opt.textContent = label;
+      sel.appendChild(opt);
+    });
+}
 
     function openAddGliderModal() {
       document.getElementById('addGliderForm').reset();
@@ -1025,7 +1036,7 @@
       ['addGliderPilot','addGliderPax'].forEach(function(f) {
         if (toggleState[f].isVisitor) toggleVisitorField(f, false);
       });
-      populateAvailableTugs();
+      populateMergeCandidates('addGliderTugSelect', null);
       openModal('addGliderModal');
     }
 
@@ -1059,11 +1070,15 @@
         // Aerotow: populate tug pilot, clear winch driver
         setToggleValue('editTugPilot',    flight.towPilot || '', tugPilots);
         setToggleValue('editWinchDriver', '',                    winchDrivers);
+        document.getElementById('editMergeGroup').style.display = 'none';
+        document.getElementById('editMergeSelect').value = '';
       } else {
         tugInfo.textContent = 'No tug assigned';
         // Could be winch launch: populate winch driver from TowPilot
         setToggleValue('editTugPilot',    '',                    tugPilots);
         setToggleValue('editWinchDriver', flight.towPilot || '', winchDrivers);
+        document.getElementById('editMergeGroup').style.display = 'block';
+        populateMergeCandidates('editMergeSelect', flight.flightKey);
       }
 
       openModal('editFlightModal');
@@ -1121,7 +1136,7 @@
       google.script.run
         .withSuccessHandler(function(result) {
           if (result.success) {
-            showAlert('Glider flight added!', 'success');
+            showAlert('Glider flight added!' + (flightData.tugFlightKey ? ' If the merged record briefly reappears after a refresh, thats expected — just merge it again.' : ''), 'success');
             closeModal('addGliderModal');
             google.script.run.withSuccessHandler(function(data) {
               flights = data || []; populateFlights();
@@ -1168,7 +1183,8 @@
       var towPilotValue = getToggleValue('editTugPilot') || getToggleValue('editWinchDriver');
 
       var flightData = {
-        flightKey:   document.getElementById('editFlightKey').value,
+        flightKey:      document.getElementById('editFlightKey').value,
+        mergeFlightKey: document.getElementById('editMergeSelect') ? document.getElementById('editMergeSelect').value : '',
         date:        document.getElementById('editDate').value,
         glider:      document.getElementById('editGlider').value,
         cn:          document.getElementById('editCN').value,
@@ -1187,7 +1203,7 @@
       google.script.run
         .withSuccessHandler(function(result) {
           if (result.success) {
-            showAlert('Flight updated!', 'success');
+            showAlert('Glider flight updated!' + (flightData.tugFlightKey ? ' If the merged record briefly reappears after a refresh, thats expected — just merge it again.' : ''), 'success');
             closeModal('editFlightModal');
             google.script.run.withSuccessHandler(function(data) {
               flights = data || [];

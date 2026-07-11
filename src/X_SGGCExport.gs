@@ -89,9 +89,11 @@ function generateSGGCExport(batchId) {
   const flights = Flights.load();
   const exported = X_ExportState.exportedKeys(SGGC_EXPORT_ID);
 
+  const ignorePilot = getConfigValue('IGNORE_PILOT', false) || IGNORE_PILOT_DEFAULT;
+
   // Split into eligible (has pilot, not yet exported) and skipped (no pilot)
   const unexported = flights.filter(f => !exported.has(f.key));
-  const eligible   = unexported.filter(f => f.pilot);
+  const eligible   = unexported.filter(f => f.pilot && f.pilot !== ignorePilot);
   const skipped    = unexported.filter(f => !f.pilot);
 
   // Log each skipped flight

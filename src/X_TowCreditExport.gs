@@ -109,9 +109,12 @@ function generateTowCreditExport() {
     ? null
     : X_ExportState.exportedKeys(MANAGER_EXPORT_ID);
 
+  const ignorePilot = getConfigValue('IGNORE_PILOT', false) || IGNORE_PILOT_DEFAULT;
+
   // Eligible: has TowPilot, not yet credited, and (if gate on) already invoiced
   const eligible = flights.filter(f =>
     f.towPilot &&
+    f.pilot !== ignorePilot &&
     !creditExported.has(f.key) &&
     (gateDisabled || flightExported.has(f.key))
   );
