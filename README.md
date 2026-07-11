@@ -98,7 +98,6 @@ These are account/access steps, not code — do them once:
 
 ## Explicitly out of scope here
 
-Direct Manager.io API integration and any move off Google
-Sheets/Apps Script are separate, later decisions — not part of this
-repo's job. This repo's only job is: one codebase, deployable to both
-clubs, with no drift.
+Any move off Google Sheets/Apps Script are separate, later decisions
+— not part of this repo's job. This repo's only job is: one codebase,
+deployable to multiple clubs, with no drift.
