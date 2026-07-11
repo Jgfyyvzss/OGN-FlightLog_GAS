@@ -16,7 +16,7 @@
  * Invocable two ways:
  *   • Menu item → runReckonExport()             saves .iif to Drive
  *   • Webapp    → runReckonExportFromWebapp(password)  returns IIF text
- *                  for download (button on serveManagerExport page)
+ *                  for download (button on serveAccountingExportsPage)
  *
  * Tracked independently via its own X_ExportState EXPORT_ID - a flight
  * can be exported to Manager and Reckon independently of each other.
@@ -123,7 +123,7 @@ function runReckonExport() {
 }
 
 /**
- * Webapp entry point - called from serveManagerExport page.
+ * Webapp entry point - called from serveAccountingExportsPage (AccountingExportsPage.gs).
  * Returns { iif, count, batchId, summary } on success or { error } on failure.
  */
 function runReckonExportFromWebapp(password) {

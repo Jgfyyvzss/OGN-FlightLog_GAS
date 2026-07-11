@@ -25,7 +25,7 @@
 const TOW_CREDIT_EXPORT_ID = 'tow_credit_tsv';
 
 /**
- * Webapp entry point — called from serveManagerExport page.
+  * Webapp entry point — called from serveAccountingExportsPage (AccountingExportsPage.gs).
  * Returns { tsv, rows } on success or { error } on failure.
  */
 function runTowCreditExportFromWebapp(password) {

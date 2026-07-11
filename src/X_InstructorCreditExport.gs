@@ -23,7 +23,7 @@
 const INSTRUCTOR_CREDIT_EXPORT_ID = 'instructor_credit_tsv';
 
 /**
- * Webapp entry point — called from serveManagerExport page.
+ * Webapp entry point — called from serveAccountingExportsPage (AccountingExportsPage.gs).
  * @returns {{ tsv, summary } | { error }}
  */
 function runInstructorCreditExportFromWebapp(password) {

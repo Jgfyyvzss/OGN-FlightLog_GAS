@@ -15,7 +15,7 @@
  */
 function doGet(e) {
   if (e && e.parameter.action === 'managerExport') {
-    return serveManagerExport();
+    return serveAccountingExportsPage();
   }
   if (e && e.parameter.action === 'backup') {
     return HtmlService.createHtmlOutput(buildBackupPage())
