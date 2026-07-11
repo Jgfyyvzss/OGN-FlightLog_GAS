@@ -1,7 +1,8 @@
 /**
  * AccountingExportsPage.gs - Password-gated webapp page for accounting exports
  *
- * Serves the single page (doGet action=managerExport) that exposes all of the
+ * Serves the single page (doGet action=accountingExport; legacy action=managerExport
+ * is still accepted so existing bookmarks keep working) that exposes all of the
  * accounting-related exports to a club treasurer/admin without needing to open
  * the spreadsheet:
  *   - Flight Invoices (Manager.io)   - X_ManagerExport.gs

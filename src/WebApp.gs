@@ -14,7 +14,7 @@
  * Serve the webapp HTML
  */
 function doGet(e) {
-  if (e && e.parameter.action === 'managerExport') {
+  if (e && (e.parameter.action === 'accountingExport' || e.parameter.action === 'managerExport')) {
     return serveAccountingExportsPage();
   }
   if (e && e.parameter.action === 'backup') {
