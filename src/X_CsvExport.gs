@@ -17,11 +17,11 @@ const _BillingCsvDef = {
 
   menuName: 'Export Billing (CSV)',
 
-  requiredCosts: ['WINCH_FEE', 'WINCH_FEE_VISITOR', 'TOW_RATE_TIME', 'TOW_RATE_ALT', 'AEF_AEROTOW_MODE'],
+  requiredCosts: ['WINCH_FEE', 'WINCH_FEE_VISITOR', 'TOW_RATE_TIME', 'TOW_RATE_ALT'],
 
   buildOutput(eligible, { batchId }) {
     const rows = [_billingCsvHeader()];
-    const aerotowMode = Costs.aefAerotowMode();
+    const aerotowMode = getAefAerotowMode();
 
     eligible.forEach(f => {
       const isAEF = f.payer === PAYER.AEF;

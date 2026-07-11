@@ -227,7 +227,7 @@ const Invoicing = (() => {
    */
   function buildInvoices(flights) {
     const groups = groupFlightsByCustomer(flights);
-    const aerotowMode = Costs.aefAerotowMode();
+     const aerotowMode = getAefAerotowMode();
 
     const invoices = [];
 

@@ -8,7 +8,7 @@
  * so grouping (Pilot / AEF / Visitor / Shared), No Bill / AEF $0 lines,
  * and the EXTERNAL/INHOUSE aerotow handling are identical between the two.
  *
- * Account/Class placeholders (Costs sheet):
+ * Account/Class placeholders (Config sheet):
  *   AR_ACCOUNT      - Accounts Receivable account (TRNS.ACCNT)
  *   INCOME_ACCOUNT  - single income account for all line items (SPL.ACCNT)
  *   CLASS           - glider Division is passed through to SPL.CLASS.
@@ -81,10 +81,7 @@ function runReckonExport() {
     'WINCH_FEE',
     'WINCH_FEE_VISITOR',
     'TOW_RATE_TIME',
-    'TOW_RATE_ALT',
-    'AEF_AEROTOW_MODE',
-    'AR_ACCOUNT',
-    'INCOME_ACCOUNT'
+    'TOW_RATE_ALT'
   ]);
 
   X_Audit.log('EXPORT_START', RECKON_EXPORT_ID);
@@ -137,10 +134,7 @@ function runReckonExportFromWebapp(password) {
       'WINCH_FEE',
       'WINCH_FEE_VISITOR',
       'TOW_RATE_TIME',
-      'TOW_RATE_ALT',
-      'AEF_AEROTOW_MODE',
-      'AR_ACCOUNT',
-      'INCOME_ACCOUNT'
+      'TOW_RATE_ALT'
     ]);
     X_Audit.log('EXPORT_START', RECKON_EXPORT_ID);
 
@@ -169,8 +163,8 @@ function runReckonExportFromWebapp(password) {
  */
 function buildReckonIIF(invoices, issueDateISO) {
   const date = formatIIFDate(issueDateISO);
-  const arAccount = Costs.arAccount();
-  const incomeAccount = Costs.incomeAccount();
+  const arAccount = Config.get('AR_ACCOUNT');
+  const incomeAccount = Config.get('INCOME_ACCOUNT');
 
   const lines = [];
   lines.push(['!TRNS', 'TRNSTYPE', 'DATE', 'ACCNT', 'NAME', 'CLASS', 'AMOUNT', 'MEMO'].join('\t'));

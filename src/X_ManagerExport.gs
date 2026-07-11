@@ -79,9 +79,7 @@ function runManagerExport() {
     'WINCH_FEE',
     'WINCH_FEE_VISITOR',
     'TOW_RATE_TIME',
-    'TOW_RATE_ALT',
-    'DUE_DATE_DAYS',
-    'AEF_AEROTOW_MODE'
+    'TOW_RATE_ALT'
   ]);
 
   X_Audit.log('EXPORT_START', MANAGER_EXPORT_ID);
@@ -172,7 +170,7 @@ function buildCsvHeader(maxLines) {
 function buildInvoiceRow(invoice, issueDate, maxLines) {
   const row = [];
 
-  const dueDateDays = Costs.dueDateDays();
+  const dueDateDays = Config.getNumber('DUE_DATE_DAYS');
 
   row.push(
     invoice.customer,

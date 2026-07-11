@@ -42,8 +42,7 @@ try {
     Costs.assertConfigured([
       'WINCH_FEE',
       'TOW_RATE_TIME',
-      'TOW_RATE_ALT',
-      'AEF_AEROTOW_MODE'
+      'TOW_RATE_ALT'
     ]);
     X_Audit.log('EXPORT_START', MANAGER_EXPORT_ID);
 

@@ -69,3 +69,26 @@ function getTimezoneOffset() {
   const offsetHours = formatted.substring(1, 3);
   return parseInt(offsetHours, 10);
 }
+
+/**
+ * Validated read of Config.AEF_AEROTOW_MODE.
+ *
+ * EXTERNAL: club is billed by an external operator for AEF aerotows -
+ *           AEF flights get a real AT line (qty only, price $0) and
+ *           feed the AEF accrual journal export.
+ * INHOUSE:  club provides tows itself - AEF aerotows are folded into
+ *           a WL-style line instead (see Invoicing.buildFlightLines),
+ *           and no accrual journal entry is generated.
+ *
+ * A dedicated accessor (rather than a bare Config.get call at each
+ * call site) keeps this validation in one place - some callers
+ * (X_AEFAccrualExport.gs) don't otherwise run X_Validation.validateConfig()
+ * first.
+ */
+function getAefAerotowMode() {
+  const mode = Config.get('AEF_AEROTOW_MODE');
+  if (![AEROTOW_MODE.EXTERNAL, AEROTOW_MODE.INHOUSE].includes(mode)) {
+    throw new Error(`AEF_AEROTOW_MODE must be '${AEROTOW_MODE.EXTERNAL}' or '${AEROTOW_MODE.INHOUSE}'`);
+  }
+  return mode;
+}

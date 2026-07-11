@@ -34,7 +34,7 @@ const MANAGER_EXPORT_ID = 'manager_csv';
 // excluded from invoice exports (Config.IGNORE_PILOT overrides this).
 const IGNORE_PILOT_DEFAULT = 'Z_IGNORE';
 
-// Costs.AEF_AEROTOW_MODE values.
+// Config.AEF_AEROTOW_MODE values.
 const AEROTOW_MODE = {
   EXTERNAL: 'EXTERNAL',
   INHOUSE:  'INHOUSE'

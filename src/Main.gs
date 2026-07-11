@@ -61,9 +61,10 @@ function fetchTodayFlights() {
  * Custom menu
  */
 function onOpen() {
-  const ui = SpreadsheetApp.getUi();
   const flightLogMenu = ui.createMenu("Flight Log")
     .addItem("Fetch Today's Flights", "fetchTodayFlights")
+    .addSeparator()
+    .addItem("Update UserGuide Links", "updateUserGuideLinks")
     .addSeparator()
     .addSubMenu(
       ui.createMenu("Test Sources")

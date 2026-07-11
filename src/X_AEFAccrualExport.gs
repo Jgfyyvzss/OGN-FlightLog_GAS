@@ -19,13 +19,10 @@ const AEF_ACCRUAL_EXPORT_ID = 'aef_accrual_journal';
 function runAEFAccrualExport() {
   Costs.assertConfigured([
     'TOW_RATE_TIME',
-    'TOW_RATE_ALT',
-    'AEF_AEROTOW_MODE',
-    'AEROTOW_EXPENSE_ACCOUNT',
-    'ACCRUED_AEROTOW_ACCOUNT'
+    'TOW_RATE_ALT'
   ]);
 
-  if (Costs.aefAerotowMode() !== AEROTOW_MODE.EXTERNAL) {
+  if (getAefAerotowMode() !== AEROTOW_MODE.EXTERNAL) {
     throw new Error('AEF_AEROTOW_MODE is not EXTERNAL - no aerotow accrual to export.');
   }
 
@@ -101,8 +98,8 @@ function buildAccrualJournalTsv(byDivision, total, batchId) {
     'yyyy-MM-dd'
   );
 
-  const expenseAccount = Costs.aerotowExpenseAccount();
-  const liabilityAccount = Costs.accruedAerotowAccount();
+  const expenseAccount = Config.get('AEROTOW_EXPENSE_ACCOUNT');
+  const liabilityAccount = Config.get('ACCRUED_AEROTOW_ACCOUNT');
 
   const divisions = Array.from(byDivision.keys());
   const maxLines = divisions.length + 1; // + 1 for the credit line

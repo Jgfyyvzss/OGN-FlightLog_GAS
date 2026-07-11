@@ -1,4 +1,11 @@
 // Costs.gs
+//
+// Costs holds ONLY dollar-amount values (rates, fees, credits). Account
+// names, mode flags, and day-count settings are Config's job - see
+// Config.gs and getAefAerotowMode() there. This split was completed by
+// moving AEF_AEROTOW_MODE, DUE_DATE_DAYS, AR_ACCOUNT, INCOME_ACCOUNT,
+// AEROTOW_EXPENSE_ACCOUNT, and ACCRUED_AEROTOW_ACCOUNT out of this sheet
+// and out of this file.
 
 const Costs = (() => {
   let cache;
@@ -22,7 +29,7 @@ const Costs = (() => {
 
   /**
    * Like get(), but returns a string rather than coercing to Number.
-   * For account names, item codes, mode flags, etc.
+   * For item codes, mode flags, etc. that live in the Costs sheet.
    */
   function getString(key) {
     const v = load()[key];
@@ -54,31 +61,6 @@ const Costs = (() => {
   function winchFeeVisitor()  { return get('WINCH_FEE_VISITOR'); }
   function towRateTime()      { return get('TOW_RATE_TIME'); }
   function towRateAlt()       { return get('TOW_RATE_ALT'); }
-  function dueDateDays()      { return get('DUE_DATE_DAYS'); }
-
-  /**
-   * EXTERNAL: club is billed by an external operator for AEF aerotows -
-   *           AEF flights get a real AT line (qty only, price $0) and
-   *           feed the AEF accrual journal export.
-   * INHOUSE:  club provides tows itself - AEF aerotows are folded into
-   *           a WL-style line instead (see Invoicing.buildFlightLines),
-   *           and no accrual journal entry is generated.
-   */
-  function aefAerotowMode() {
-    const mode = getString('AEF_AEROTOW_MODE');
-    if (![AEROTOW_MODE.EXTERNAL, AEROTOW_MODE.INHOUSE].includes(mode)) {
-      throw new Error(`AEF_AEROTOW_MODE must be '${AEROTOW_MODE.EXTERNAL}' or '${AEROTOW_MODE.INHOUSE}'`);
-    }
-    return mode;
-  }
-
-  // Accounts for the AEF aerotow accrual journal (X_AEFAccrualExport.gs)
-  function aerotowExpenseAccount()  { return getString('AEROTOW_EXPENSE_ACCOUNT'); }
-  function accruedAerotowAccount()  { return getString('ACCRUED_AEROTOW_ACCOUNT'); }
-
-  // Account placeholders - for the future Reckon IIF export
-  function arAccount()       { return getString('AR_ACCOUNT'); }
-  function incomeAccount()   { return getString('INCOME_ACCOUNT'); }
 
   return {
     load,
@@ -89,12 +71,6 @@ const Costs = (() => {
     winchFeeVisitor,
     towRateTime,
     towRateAlt,
-    dueDateDays,
-    aefAerotowMode,
-    aerotowExpenseAccount,
-    accruedAerotowAccount,
-    arAccount,
-    incomeAccount,
     assertConfigured
   };
 })();
