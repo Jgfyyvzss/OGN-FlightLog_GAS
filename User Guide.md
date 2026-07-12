@@ -1,11 +1,16 @@
 # FlightLog — Pilot Entry Webapp: Quick Reference
 
 ## Accessing it
-Open the club's FlightLog web link (bookmark it). Flights from today auto-load; if none yet today, the last 3 days show.
+Open the club's FlightLog web link (bookmark it). If the **🔄 Refresh Flights** hasn't been tapped or there are no flights yet today, the last 3 days show.
 
 ## Main screen
 - **Flight list** — cards for each flight tracked by OGN today. Status badge: `Needs Pilot` / `Flying` (still airborne) / `Logged`.
 - Tap a card to select it — it highlights and the form below fills in.
+
+## To retrieve latest flights
+- Tap **🔄 Refresh Flights** to re-pull from OGN. Flights are ONLY retrieved on manual refresh.
+- Still missing? It may not have tracked (FLARM issue) — use **➕ Add Glider Flight** to enter it manually.
+- A tug/tow flight with no glider attached shows with **— () -** as the Glider Reg **&** the Tug Reg below — you can attach it to a glider flight by either selecting the related glider flight from the list, then **Edit Selected Flight** *Select Tug Flight* from the  dropdown inside. If the related glider flight hasn't been logged, **Add Glider Flight** and select the tug in there. .
 
 ## Logging your flight (the normal case)
 1. Tap your flight card.
@@ -16,6 +21,9 @@ Open the club's FlightLog web link (bookmark it). Flights from today auto-load; 
 6. **Remarks** — optional, 80 chars (e.g. cable break reason, No Charge reason).
 7. Tap **Submit Flight Log**.
 
+### Visitor toggle
+Any field with a **Visitor** button lets you type a name that isn't in the club's People list (e.g. a guest pilot, guest instructor, or visiting tug/winch operator). Tap again to switch back to the dropdown.
+
 ### Special Billing options
 | Value | Meaning |
 |---|---|
@@ -25,21 +33,14 @@ Open the club's FlightLog web link (bookmark it). Flights from today auto-load; 
 | **No Charge** | Manual override — flight logged and billed as normal but priced at $0 (e.g. cable break, waived training flight) |
 | **Self Launch** | Suppresses the launch/tow billing line; flight-time billing still applies |
 
-## If your flight isn't showing
-- Tap **🔄 Refresh Flights** to re-pull from OGN.
-- Still missing? It may not have tracked (FLARM issue) — use **➕ Add Glider Flight** to enter it manually.
-- A tug/tow flight with no glider attached shows as an **orphan tug** — you can attach it to your glider flight from the *Select Tug Flight* dropdown inside **Add Glider Flight**, or merge it later via **Edit Selected Flight**.
 
 ## Adding flights manually
 - **➕ Add Glider Flight** — date, takeoff time, rego, CN, type, landing time, pilot/pax, special billing, and optionally attach an existing orphan tug flight.
 - **🛩️ Add Tug Flight** — date, takeoff time, tug rego, max alt, landing/flight time, tug pilot.
 
 ## Editing
-- **Edit Selected Flight** (enabled once a flight is selected) — fix date/time/rego/type, pilot/pax, special billing, remarks, and tug pilot **or** winch driver (whichever applies to that flight).
+- **Edit Selected Flight** (enabled once a flight is selected) — fix date/time/rego/type, pilot/pax, special billing, remarks, and tug pilot **or** winch driver (whichever applies to that flight). Link the flight to a tug flight if needed.
 - **✈️ Edit Tugs** — bulk-assign/fix tug pilot names across all tug flights logged today.
-
-## Visitor toggle
-Any field with a **Visitor** button lets you type a name that isn't in the club's People list (e.g. a guest pilot, guest instructor, or visiting tug/winch operator). Tap again to switch back to the dropdown.
 
 ## After submitting
 The flight is marked **Logged** and the form resets. If refresh fails after a successful submit, your entry is still saved — just refresh manually.
