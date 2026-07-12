@@ -1019,12 +1019,11 @@
   if (!sel) return;
   sel.innerHTML = '<option value="">None</option>';
   flights
-    .filter(function(f) { return !f.pilot && f.flightKey !== excludeFlightKey; })
+    .filter(function(f) { return f.towPlane && !f.glider && f.flightKey !== excludeFlightKey; })
     .forEach(function(f) {
       var opt = document.createElement('option');
       opt.value = f.flightKey;
-      var label = (f.glider || f.towPlane || '(unknown)') + ' - ' + (f.takeOff || '');
-      if (f.towPilot) label += ' (' + f.towPilot + ')';
+      var label = f.towPlane + ' - ' + (f.takeOff || '') + (f.towPilot ? ' (' + f.towPilot + ')' : '');
       opt.textContent = label;
       sel.appendChild(opt);
     });
