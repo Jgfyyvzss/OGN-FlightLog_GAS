@@ -272,14 +272,26 @@ function _buildRow(flight, existing) {
       val = '';
     }
 
+    // Timestamp column: always write current time.
+    if (s.header === 'Timestamp') {
+      row[i] = new Date();
+      return;
+    }
+
+    // Fill-forward on update: a blank incoming value never overwrites an
+    // existing non-blank value. Different OGN record shapes (orphan tug vs
+    // glider-with-no-tow) don't carry every column on every fetch - without
+    // this, a fetch that's simply silent on a field (rather than actively
+    // correcting it) wipes out manually merged/edited data instead of
+    // leaving it alone. A genuine non-blank update still overwrites as
+    // before (e.g. landing time once a flight completes).
+    if (existing && val === '') {
+      return;
+    }
+
     // Date column: prefix with apostrophe to force text storage.
     if (s.header === 'Date' && val && !String(val).startsWith("'")) {
       val = "'" + val;
-    }
-
-    // Timestamp column: always write current time.
-    if (s.header === 'Timestamp') {
-      val = new Date();
     }
 
     row[i] = val;
