@@ -48,7 +48,7 @@ try {
 
     const { tsv, batchId, eligible, noBillFlights } = generateManagerExport();
 
-    DriveApp.createFile(
+    getExportFolder().createFile(
       Utilities.newBlob(tsv, 'text/csv', 'ManagerExport_' + batchId + '.csv')
     );
 
