@@ -110,7 +110,7 @@ const X_ExportBase = (() => {
 
     // ── 7. Save to Drive ─────────────────────────────────────────────────────
     const blob = Utilities.newBlob(output.content, output.mimeType, output.filename);
-    DriveApp.createFile(blob);
+    getExportFolder().createFile(blob);
 
     // ── 8. Mark as exported ──────────────────────────────────────────────────
     X_ExportState.markExported(def.id, batchId, eligible.map(f => f.key));
