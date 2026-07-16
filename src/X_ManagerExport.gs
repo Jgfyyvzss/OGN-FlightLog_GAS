@@ -92,7 +92,7 @@ function runManagerExport() {
     `ManagerExport_${batchId}.csv`
   );
 
-  DriveApp.createFile(blob);
+  getExportFolder().createFile(blob);
 
   const skipped = flights.filter(f =>
     !f.pilot && !exported.has(f.key)
