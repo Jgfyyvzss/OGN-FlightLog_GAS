@@ -59,7 +59,7 @@ function runInstructorCreditExport() {
     const blob = Utilities.newBlob(
       tsv, 'text/csv', 'InstructorCreditExport_' + batchId + '.csv'
     );
-    DriveApp.createFile(blob);
+    getExportFolder().createFile(blob);
 
     X_Audit.log('EXPORT_SUCCESS', INSTRUCTOR_CREDIT_EXPORT_ID, batchId, {
       pilotCount:  instructorCount,
