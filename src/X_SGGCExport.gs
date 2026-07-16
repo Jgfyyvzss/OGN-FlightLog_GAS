@@ -56,7 +56,7 @@ function runSGGCExport() {
       'text/plain',
       'SGGCExport_' + batchId + '.tsv'
     );
-    const file = DriveApp.createFile(blob);
+    const file = getExportFolder().createFile(blob);
 
     X_Audit.log('EXPORT_SUCCESS', SGGC_EXPORT_ID, batchId, {
       flightCount: eligible.length,
