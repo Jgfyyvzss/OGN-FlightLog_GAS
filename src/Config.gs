@@ -71,6 +71,21 @@ function getTimezoneOffset() {
 }
 
 /**
+ * Returns the Drive folder exports should be saved to, per Config key
+ * EXPORT_FOLDER_ID. Falls back to the Drive root if unset, so this is
+ * safe to deploy before every club has configured it.
+ */
+function getExportFolder() {
+  const folderId = getConfigValue('EXPORT_FOLDER_ID', false);
+  if (!folderId) return DriveApp.getRootFolder();
+  try {
+    return DriveApp.getFolderById(folderId);
+  } catch (e) {
+    throw new Error(`Config EXPORT_FOLDER_ID "${folderId}" is not a valid/accessible folder ID: ${e.message}`);
+  }
+}
+
+/**
  * Validated read of Config.AEF_AEROTOW_MODE.
  *
  * EXTERNAL: club is billed by an external operator for AEF aerotows -
