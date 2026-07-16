@@ -61,7 +61,7 @@ function runTowCreditExport() {
     const blob = Utilities.newBlob(
       tsv, 'text/csv', 'TowCreditExport_' + batchId + '.csv'
     );
-    DriveApp.createFile(blob);
+    getExportFolder().createFile(blob);
 
     X_Audit.log('EXPORT_SUCCESS', TOW_CREDIT_EXPORT_ID, batchId, {
       pilotCount:  operatorCount,
