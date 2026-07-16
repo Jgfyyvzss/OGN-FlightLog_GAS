@@ -94,7 +94,7 @@ function runReckonExport() {
     `ReckonExport_${batchId}.iif`
   );
 
-  DriveApp.createFile(blob);
+  getExportFolder().createFile(blob);
 
   const skipped = flights.filter(f =>
     !f.pilot && !exported.has(f.key)
