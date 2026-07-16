@@ -140,7 +140,7 @@ function runReckonExportFromWebapp(password) {
 
     const { iif, batchId, eligible, noBillFlights } = generateReckonExport();
 
-    DriveApp.createFile(
+    getExportFolder().createFile(
       Utilities.newBlob(iif, 'text/plain', 'ReckonExport_' + batchId + '.iif')
     );
 
