@@ -70,7 +70,7 @@ function runAEFAccrualExport() {
 
   const tsv = buildAccrualJournalTsv(byDivision, total, batchId);
 
-  DriveApp.createFile(
+  getExportFolder().createFile(
     Utilities.newBlob(tsv, 'text/csv', `AEFAccrualJournal_${batchId}.csv`)
   );
 
