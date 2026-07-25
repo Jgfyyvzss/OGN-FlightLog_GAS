@@ -28,14 +28,6 @@
  * Remarks: appended (truncated to 80 chars) to each line's description, so
  * context set by the exporter (e.g. reason for No Charge) is visible on the
  * invoice/CSV line itself.
- *
- * GAus Introductory Membership: when Config AEF_MEMBERSHIP_INVOICING = 'ON',
- * one extra line (item ITEM_CODE_GAINTRO, amount Costs.GAUS_INTRO_MEMBERSHIP)
- * is added once per AEF invoice group in buildInvoices() - not per flight,
- * and not via buildFlightLines(), so it does NOT appear in X_CsvExport.gs
- * (which calls buildFlightLines() directly per raw flight, bypassing
- * grouping). Unlike the AEF/No Charge flight lines, this line is a real
- * charge and is not zeroed by payerPriceMultiplier().
  */
 const Invoicing = (() => {
 
@@ -153,27 +145,6 @@ const Invoicing = (() => {
   }
 
   /**
-  * GAus Introductory Membership line, added once per AEF invoice group
-  * (not per flight) when Config AEF_MEMBERSHIP_INVOICING = 'ON'.
-  * Item code comes from Config ITEM_CODE_GAINTRO (fallback 'GAIntro').
-  * Amount comes from Costs GAUS_INTRO_MEMBERSHIP. Not multiplied by
-  * payerPriceMultiplier() - this is a real charge alongside the $0
-  * AEF flight/tow lines, not a billing line being waived.
-  */
-  function _gaIntroMembershipLine() {
-  const on = (getConfigValue('AEF_MEMBERSHIP_INVOICING', false) || '').toUpperCase() === 'ON';
-    if (!on) return null;
-
-    return {
-      item: getConfigValue('ITEM_CODE_GAINTRO', false) || 'GAIntro',
-      description: 'GAus Introductory Membership',
-      qty: '1.00',
-      unitPrice: Costs.get('GAUS_INTRO_MEMBERSHIP').toFixed(2),
-      division: ''
-    };
-}
-
-  /**
    * Build line items for a single flight.
    * context: { isAEF, aerotowMode }
    */
@@ -274,11 +245,6 @@ const Invoicing = (() => {
       group.flights.forEach(f => {
         lines.push(...buildFlightLines(f, group.splitRatio, context));
       });
-
-      if (isAEF) {
-        const membershipLine = _gaIntroMembershipLine();
-        if (membershipLine) lines.push(membershipLine);
-      }
 
       invoices.push({
         customer: group.customer,
