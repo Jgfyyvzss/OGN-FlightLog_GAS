@@ -229,7 +229,8 @@ function parseAircraftFlight(apiFlight, device, isoDate, flightIndex, deviceInde
   // - aircraft_type 2 (tow plane) or 3 (ultralight)
   // - AND valid registration configured
   // Anything else (type 0, 1, 4, 5, 6, or missing registration) = glider
-  const isTug = (device.aircraft_type === 2 || device.aircraft_type === 3) && 
+  const isTug = (device.aircraft_type === 2 || device.aircraft_type === 3 ||
+                 isForcedTugRego(device.registration)) &&
                  device.registration && 
                  device.registration.trim() !== "";
   
