@@ -49,3 +49,9 @@ const TOW_BILLING_MODE = {
 // Config.CREDIT_GATE value that disables the "already invoiced" gate
 // on the tow/winch and instructor credit exports.
 const CREDIT_GATE_OFF = 'OFF';
+
+// Config.DATA_SOURCE_PRIORITY values.
+const DATA_SOURCE_PRIORITY = {
+  API_FIRST:  'API_FIRST',
+  HTML_FIRST: 'HTML_FIRST'
+};
