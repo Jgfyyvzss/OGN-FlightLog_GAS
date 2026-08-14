@@ -124,6 +124,20 @@ function isForcedTugRego(rego) {
   return forced.includes((rego || '').trim().toUpperCase());
 }
 
+/**
+ * Validated read of Config.DATA_SOURCE_PRIORITY.
+ *
+ * API_FIRST  (default): try the FlightBookAPI first, fall back to the
+ *            logbook.glidernet.org HTML scraper if the API errors or
+ *            returns no flights.
+ * HTML_FIRST: try the HTML scraper first, fall back to the API. Useful
+ *            when the API's device-type data is misclassifying a FLARM
+ *            (e.g. a tug parsed as a glider) and the scraper's own
+ *            tow/glider linking is currently more reliable for a club.
+ *
+ * Defaults to API_FIRST when Config.DATA_SOURCE_PRIORITY is unset, so
+ * this is safe to deploy before every club has configured it.
+ */
 function getDataSourcePriority() {
   const val = getConfigValue('DATA_SOURCE_PRIORITY', false) || DATA_SOURCE_PRIORITY.API_FIRST;
   if (![DATA_SOURCE_PRIORITY.API_FIRST, DATA_SOURCE_PRIORITY.HTML_FIRST].includes(val)) {
