@@ -107,3 +107,19 @@ function getAefAerotowMode() {
   }
   return mode;
 }
+
+/**
+ * Returns true if `rego` should be force-classified as a tug, regardless
+ * of what glidernet's device_type says. Some club tugs are misconfigured
+ * in OGN's device DB and get parsed as ordinary gliders.
+ *
+ * Reads Config key FORCE_TUG_REGOS - a comma-separated list of regos,
+ * e.g. "D-0788,D-1234". Unset/blank Config key -> no forced regos, so
+ * this is safe to deploy before every club has configured it.
+ */
+function isForcedTugRego(rego) {
+  const raw = getConfigValue('FORCE_TUG_REGOS', false);
+  if (!raw) return false;
+  const forced = raw.split(',').map(r => r.trim().toUpperCase()).filter(Boolean);
+  return forced.includes((rego || '').trim().toUpperCase());
+}
