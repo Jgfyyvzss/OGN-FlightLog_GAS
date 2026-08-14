@@ -851,9 +851,11 @@
       var card = document.createElement('div');
       card.className = 'flight-card';
 
+      var landed = flight.glider ? flight.gLanding : flight.pLanding;
+
       var status = 'needs-pilot', statusText = 'Needs Pilot';
-      if (flight.pilot)       { status = 'logged';  statusText = 'Logged'; }
-      else if (!flight.gLanding) { status = 'flying';  statusText = 'Flying'; }
+      if (flight.pilot)  { status = 'logged'; statusText = 'Logged'; }
+      else if (!landed)  { status = 'flying'; statusText = 'Flying'; }
 
       var html = '<div class="flight-card-header">' +
         '<div class="flight-info">' + (flight.glider || '—') + ' (' + (flight.cn || '') + ') - ' + (flight.type || '') + '</div>' +
@@ -863,6 +865,8 @@
       html += '<div class="flight-meta">Takeoff: ' + (flight.takeOff || '');
       if (flight.gLanding) html += ' • Landing: ' + flight.gLanding;
       if (flight.gTime)    html += ' • Time: '    + flight.gTime;
+      if (!flight.glider && flight.pLanding) html += ' • Landing: ' + flight.pLanding;
+      if (!flight.glider && flight.pTime)    html += ' • Time: '    + flight.pTime;
       html += '</div>';
 
       // Tow/glider info line — always shown when towPlane is set
