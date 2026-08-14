@@ -4,38 +4,38 @@
  * Entry points for menu items and triggers
  */
 
-/**
- * Smart fetch - try API first, fall back to HTML
- * @param {string} dateStr - Date in yyyy-mm-dd format, or blank for today
- * @param {string} targetSheet - Sheet name (defaults to FLIGHT_LOG_SHEET_NAME)
- */
 function smartFetchFlights(dateStr, targetSheet) {
   const sheetName = targetSheet || FLIGHT_LOG_SHEET_NAME;
-
-  // Initialize sheet if needed
   const sheet = initializeSheet(sheetName);
-
   const isoDate = dateStr || getTodayISO();
 
-  Logger.log("=== Smart Fetch for " + isoDate + " ===");
+  const priority = getDataSourcePriority();
+  const sources = priority === DATA_SOURCE_PRIORITY.HTML_FIRST
+    ? [{ name: 'HTML', fn: fetchFlightsFromHTML }, { name: 'API', fn: fetchFlightsFromAPI }]
+    : [{ name: 'API',  fn: fetchFlightsFromAPI  }, { name: 'HTML', fn: fetchFlightsFromHTML }];
 
-  // Try API first
-  try {
-    Logger.log("Attempting API fetch...");
-    const result = fetchFlightsFromAPI(isoDate, sheetName);
+  Logger.log(`=== Smart Fetch for ${isoDate} (priority: ${priority}) ===`);
 
-    if (result.success && result.count > 0) {
-      Logger.log("✓ API fetch successful: " + result.count + " flights");
-      return result;
-    } else {
-      Logger.log("API returned no flights, trying HTML...");
+  let lastError = null;
+  for (const source of sources) {
+    try {
+      Logger.log(`Attempting ${source.name} fetch...`);
+      const result = source.fn(isoDate, sheetName);
+      if (result.success && result.count > 0) {
+        Logger.log(`✓ ${source.name} fetch successful: ${result.count} flights`);
+        return result;
+      }
+      Logger.log(`${source.name} returned no flights, trying next source...`);
+    } catch (err) {
+      Logger.log(`${source.name} fetch failed: ${err.message}`);
+      lastError = err;
     }
-  } catch (apiError) {
-    Logger.log("API fetch failed: " + apiError.message);
-    Logger.log("Falling back to HTML scraper...");
   }
 
-  // Fall back to HTML
+  throw new Error(`Both API and HTML sources failed or returned no flights. Last error: ${lastError ? lastError.message : 'none'}`);
+}
+
+// Fall back to HTML
   try {
     Logger.log("Attempting HTML scrape...");
     const result = fetchFlightsFromHTML(isoDate, sheetName);
