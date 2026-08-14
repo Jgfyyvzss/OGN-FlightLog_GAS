@@ -123,3 +123,11 @@ function isForcedTugRego(rego) {
   const forced = raw.split(',').map(r => r.trim().toUpperCase()).filter(Boolean);
   return forced.includes((rego || '').trim().toUpperCase());
 }
+
+function getDataSourcePriority() {
+  const val = getConfigValue('DATA_SOURCE_PRIORITY', false) || DATA_SOURCE_PRIORITY.API_FIRST;
+  if (![DATA_SOURCE_PRIORITY.API_FIRST, DATA_SOURCE_PRIORITY.HTML_FIRST].includes(val)) {
+    throw new Error(`Config DATA_SOURCE_PRIORITY must be '${DATA_SOURCE_PRIORITY.API_FIRST}' or '${DATA_SOURCE_PRIORITY.HTML_FIRST}'`);
+  }
+  return val;
+}
