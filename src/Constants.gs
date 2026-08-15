@@ -54,6 +54,6 @@ const CREDIT_GATE_OFF = 'OFF';
 // tries first (the other is the fallback if the first returns no flights
 // or errors). Defaults to API_FIRST if unset (see getDataSourcePriority).
 const DATA_SOURCE_PRIORITY = {
-  API_FIRST:  'API_FIRST',
-  HTML_FIRST: 'HTML_FIRST'
+  FLIGHTBOOK: 'FLIGHTBOOK',
+  LOGBOOK:    'LOGBOOK'
 };
