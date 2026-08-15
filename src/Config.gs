@@ -135,13 +135,13 @@ function isForcedTugRego(rego) {
  *            (e.g. a tug parsed as a glider) and the scraper's own
  *            tow/glider linking is currently more reliable for a club.
  *
- * Defaults to API_FIRST when Config.DATA_SOURCE_PRIORITY is unset, so
+ * Defaults to FLIGHTBOOK when Config.DATA_SOURCE_PRIORITY is unset, so
  * this is safe to deploy before every club has configured it.
  */
 function getDataSourcePriority() {
-  const val = getConfigValue('DATA_SOURCE_PRIORITY', false) || DATA_SOURCE_PRIORITY.API_FIRST;
-  if (![DATA_SOURCE_PRIORITY.API_FIRST, DATA_SOURCE_PRIORITY.HTML_FIRST].includes(val)) {
-    throw new Error(`Config DATA_SOURCE_PRIORITY must be '${DATA_SOURCE_PRIORITY.API_FIRST}' or '${DATA_SOURCE_PRIORITY.HTML_FIRST}'`);
+  const val = getConfigValue('DATA_SOURCE_PRIORITY', false) || DATA_SOURCE_PRIORITY.FLIGHTBOOK;
+  if (![DATA_SOURCE_PRIORITY.FLIGHTBOOK, DATA_SOURCE_PRIORITY.LOGBOOK].includes(val)) {
+    throw new Error(`Config DATA_SOURCE_PRIORITY must be '${DATA_SOURCE_PRIORITY.FLIGHTBOOK}' or '${DATA_SOURCE_PRIORITY.LOGBOOK}'`);
   }
   return val;
 }
