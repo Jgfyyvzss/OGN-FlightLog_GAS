@@ -20,7 +20,7 @@ function smartFetchFlights(dateStr, targetSheet) {
   const isoDate = dateStr || getTodayISO();
 
   const priority = getDataSourcePriority();
-  const sources = priority === DATA_SOURCE_PRIORITY.HTML_FIRST
+  const sources = priority === DATA_SOURCE_PRIORITY.LOGBOOK
     ? [{ name: 'HTML', fn: fetchFlightsFromHTML }, { name: 'API',  fn: fetchFlightsFromAPI  }]
     : [{ name: 'API',  fn: fetchFlightsFromAPI  }, { name: 'HTML', fn: fetchFlightsFromHTML }];
 
