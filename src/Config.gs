@@ -1,65 +1,147 @@
-//X_Audit.gs
-const X_Audit = (() => {
-   function log(action, exportId, batchId, details = {}) {
-     Sheets.appendRow('AuditLog', [
-       new Date(),
-        Session.getActiveUser().getEmail(),
-        action,
-        exportId,
-        batchId,
-        details.pilotCount || '',
-        details.flightCount || '',
-        details.notes || ''
-        ]);
-        } return { log };
-               
-         })();
+/**
+ * Config.gs - Configuration Management
+ * Reads configuration from Config sheet
+ * Shared by all modules
+ */
 
+const Config = (() => {
+  let cache = null;
 
-function debugHTMLScraper() {
-  const config = getConfig();
-  const airportCode = config.AIRPORT_CODE;
-  const timezone = config.TIMEZONE;
-  const isoDate = getTodayISO();
+  function load() {
+    if (cache) return cache;
+    const cfg = {};
+    Sheets.getTabAsObjects('Config').forEach(r => {
+      if (r.Key) cfg[r.Key] = r.Value;
+    });
 
-  const parts = isoDate.split("-");
-  const date = new Date(parts[0], parts[1] - 1, parts[2]);
-  const formattedDateForURL = Utilities.formatDate(date, timezone, "ddMMyyyy");
-  const timezoneOffset = getTimezoneOffset();
+    // Validate required keys
+    const required = ["AIRPORT_CODE", "TIMEZONE", "SHEET_ID"];
+    const missing = required.filter(k => !cfg[k]);
+    if (missing.length > 0) throw new Error("Missing required config: " + missing.join(", "));
 
-  const url = `https://logbook.glidernet.org/index.php?t=0&a=${airportCode}&d=${formattedDateForURL}&s=QFE&u=m&z=${timezoneOffset}`;
-  Logger.log('URL: ' + url);
-  Logger.log('Resolved DATA_SOURCE_PRIORITY: ' + getDataSourcePriority());
+    cache = cfg;
+    return cache;
+  }
 
-  let html;
+  function get(key) {
+    const cfg = load();
+    if (!(key in cfg)) throw new Error(`Missing Config key: ${key}`);
+    return cfg[key];
+  }
+
+  function getNumber(key) {
+    const v = Number(get(key));
+    if (isNaN(v)) throw new Error(`Config ${key} must be numeric`);
+    return v;
+  }
+
+  function getAll() {
+    return { ...load() };
+  }
+
+  function clearCache() {
+    cache = null;
+  }
+
+  return { get, getNumber, getAll, clearCache };
+})();
+
+/**
+ * Legacy API for compatibility
+ */
+function getConfig() {
+  return Config.getAll();
+}
+
+function getConfigValue(key, required = true) {
   try {
-    const resp = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
-    Logger.log('HTTP status: ' + resp.getResponseCode());
-    html = resp.getContentText();
-    Logger.log('Response length: ' + html.length);
+    return Config.get(key);
   } catch (e) {
-    Logger.log('FETCH THREW: ' + e.toString());
-    return;
+    if (required) throw e;
+    return null;
   }
+}
 
-  const tableMatches = html.match(/<TABLE[\s\S]*?<\/TABLE>/gi);
-  Logger.log('Tables found: ' + (tableMatches ? tableMatches.length : 0));
-  if (!tableMatches || tableMatches.length < 2) {
-    Logger.log('Would return 0 flights here — this is why it falls back to API.');
-    return;
+function getTimezoneOffset() {
+  const timezone = getConfigValue("TIMEZONE");
+  const now = new Date();
+  const formatted = Utilities.formatDate(now, timezone, "Z"); // "+11:00"
+  const offsetHours = formatted.substring(1, 3);
+  return parseInt(offsetHours, 10);
+}
+
+/**
+ * Returns the Drive folder exports should be saved to, per Config key
+ * EXPORT_FOLDER_ID. Falls back to the Drive root if unset, so this is
+ * safe to deploy before every club has configured it.
+ */
+function getExportFolder() {
+  const folderId = getConfigValue('EXPORT_FOLDER_ID', false);
+  if (!folderId) return DriveApp.getRootFolder();
+  try {
+    return DriveApp.getFolderById(folderId);
+  } catch (e) {
+    throw new Error(`Config EXPORT_FOLDER_ID "${folderId}" is not a valid/accessible folder ID: ${e.message}`);
   }
+}
 
-  const rowMatches = tableMatches[1].match(/<TR>[\s\S]*?<\/TR>/gi) || [];
-  Logger.log('Rows found: ' + rowMatches.length);
+/**
+ * Validated read of Config.AEF_AEROTOW_MODE.
+ *
+ * EXTERNAL: club is billed by an external operator for AEF aerotows -
+ *           AEF flights get a real AT line (qty only, price $0) and
+ *           feed the AEF accrual journal export.
+ * INHOUSE:  club provides tows itself - AEF aerotows are folded into
+ *           a WL-style line instead (see Invoicing.buildFlightLines),
+ *           and no accrual journal entry is generated.
+ *
+ * A dedicated accessor (rather than a bare Config.get call at each
+ * call site) keeps this validation in one place - some callers
+ * (X_AEFAccrualExport.gs) don't otherwise run X_Validation.validateConfig()
+ * first.
+ */
+function getAefAerotowMode() {
+  const mode = Config.get('AEF_AEROTOW_MODE');
+  if (![AEROTOW_MODE.EXTERNAL, AEROTOW_MODE.INHOUSE].includes(mode)) {
+    throw new Error(`AEF_AEROTOW_MODE must be '${AEROTOW_MODE.EXTERNAL}' or '${AEROTOW_MODE.INHOUSE}'`);
+  }
+  return mode;
+}
 
-  let dumped = 0;
-  rowMatches.forEach(rowHtml => {
-    if (dumped >= 8) return; // just the first few for inspection
-    const cellMatches = rowHtml.match(/<T[HD][^>]*>([\s\S]*?)<\/T[HD]>/gi);
-    if (!cellMatches || cellMatches.length < 5) return;
-    const cells = cellMatches.map(extractTextFromCell);
-    if (!/^\d+$/.test(cells[0].trim())) return;
-    Logger.log('Row: ' + JSON.stringify(cells));
-    dumped++;
-  });
+/**
+ * Returns true if `rego` should be force-classified as a tug, regardless
+ * of what glidernet's device_type says. Some club tugs are misconfigured
+ * in OGN's device DB and get parsed as ordinary gliders.
+ *
+ * Reads Config key FORCE_TUG_REGOS - a comma-separated list of regos,
+ * e.g. "D-0788,D-1234". Unset/blank Config key -> no forced regos, so
+ * this is safe to deploy before every club has configured it.
+ */
+function isForcedTugRego(rego) {
+  const raw = getConfigValue('FORCE_TUG_REGOS', false);
+  if (!raw) return false;
+  const forced = raw.split(',').map(r => r.trim().toUpperCase()).filter(Boolean);
+  return forced.includes((rego || '').trim().toUpperCase());
+}
+
+/**
+ * Validated read of Config.DATA_SOURCE_PRIORITY.
+ *
+ * API_FIRST  (default): try the FlightBookAPI first, fall back to the
+ *            logbook.glidernet.org HTML scraper if the API errors or
+ *            returns no flights.
+ * HTML_FIRST: try the HTML scraper first, fall back to the API. Useful
+ *            when the API's device-type data is misclassifying a FLARM
+ *            (e.g. a tug parsed as a glider) and the scraper's own
+ *            tow/glider linking is currently more reliable for a club.
+ *
+ * Defaults to API_FIRST when Config.DATA_SOURCE_PRIORITY is unset, so
+ * this is safe to deploy before every club has configured it.
+ */
+function getDataSourcePriority() {
+  const val = getConfigValue('DATA_SOURCE_PRIORITY', false) || DATA_SOURCE_PRIORITY.API_FIRST;
+  if (![DATA_SOURCE_PRIORITY.API_FIRST, DATA_SOURCE_PRIORITY.HTML_FIRST].includes(val)) {
+    throw new Error(`Config DATA_SOURCE_PRIORITY must be '${DATA_SOURCE_PRIORITY.API_FIRST}' or '${DATA_SOURCE_PRIORITY.HTML_FIRST}'`);
+  }
+  return val;
 }
