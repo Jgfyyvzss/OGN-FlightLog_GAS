@@ -96,14 +96,26 @@ function parseHTMLFlights(rawHtml, isoDate) {
     // Check for colspan (totals row)
     if (rowHtml.includes('colspan')) return;
     
-    // Get glider registration
+    // Get glider registration and tow plane registration.
+    // Table columns: 0=RowID, 1=TowPlane reg, 2=TowPlane type, 3=Glider,
+    // 4=CN, 5=Type, 6=TakeOff, 7=GliderLanding, 8=GliderTime,
+    // 9=PlaneLanding, 10=PlaneTime, 11=TowPlane Max Alt (QFE), 12=Remarks.
     const glider = cells[3] || "";
+    const towPlane = cells[1] || "";
+    const towType = cells[2] || "";
     
     // Get takeoff time
     const takeOff = cells[6] || "";
     
+    // Orphan tow row: no glider on this row, only a tow plane (e.g. a tow
+    // flight with no glider attached yet). Key by tow plane registration
+    // instead of glider, matching the API source's orphan-tug convention
+    // (see parseAircraftFlight in FlightBookAPI.gs) so the same real-world
+    // flight produces the same FlightKey regardless of data source.
+    const keyIdentifier = glider || towPlane;
+    
     // Generate FlightKey using new format
-    const flightKey = generateFlightKey(glider, isoDate, takeOff);
+    const flightKey = generateFlightKey(keyIdentifier, isoDate, takeOff);
     
     // Parse the flight data
     const flight = {
@@ -115,9 +127,11 @@ function parseHTMLFlights(rawHtml, isoDate) {
       takeOff: takeOff,
       gLanding: cells[7] || "",
       gTime: cells[8] || "",
+      towPlane: towPlane,
+      towType: towType,
       pLanding: cells[9] || "",
       pTime: cells[10] || "",
-      maxAlt: cells[11] || "",
+      towMaxAlt: cells[11] || "",
       remarks: cells[12] || "",
       source: "HTML",
       // HTML scraper doesn't have quality or code data
