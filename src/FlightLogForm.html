@@ -1074,42 +1074,56 @@ function selectFlight(flight, cardEl) {
     }
 
     function openEditFlightModal(flight) {
-      document.getElementById('editFlightKey').value  = flight.flightKey;
-      document.getElementById('editDate').value       = flight.date;
-      document.getElementById('editTakeoff').value    = (flight.takeOff || '').replace('h', ':');
-      document.getElementById('editGlider').value     = flight.glider || '';
-      document.getElementById('editCN').value         = flight.cn     || '';
-      document.getElementById('editType').value       = flight.type   || '';
-      document.getElementById('editLanding').value    = flight.gLanding ? flight.gLanding.replace('h', ':') : '';
-      document.getElementById('editPayer').value      = flight.payer  || '';
-      document.getElementById('editRemarks').value    = flight.remarks || '';
+  document.getElementById('editFlightKey').value  = flight.flightKey;
+  document.getElementById('editDate').value       = flight.date;
+  document.getElementById('editTakeoff').value    = (flight.takeOff || '').replace('h', ':');
+  document.getElementById('editGlider').value     = flight.glider || '';
+  document.getElementById('editCN').value         = flight.cn     || '';
+  document.getElementById('editType').value       = flight.type   || '';
+  document.getElementById('editLanding').value    = flight.gLanding ? flight.gLanding.replace('h', ':') : '';
+  document.getElementById('editPayer').value      = flight.payer  || '';
+  document.getElementById('editRemarks').value    = flight.remarks || '';
 
-      setToggleValue('editPilot', flight.pilot   || '', pilots);
-      setToggleValue('editPax',   flight.pax     || '', instructors);
+  setToggleValue('editPilot', flight.pilot   || '', pilots);
+  setToggleValue('editPax',   flight.pax     || '', instructors);
 
-      // Tug info display
-      var tugInfo = document.getElementById('editTugInfo');
-      if (flight.towPlane) {
-        tugInfo.textContent = 'Tug: ' + flight.towPlane +
-          (flight.towType   ? ' (' + flight.towType + ')' : '') +
-          (flight.towMaxAlt ? ' • Max Alt: ' + flight.towMaxAlt : '');
-        // Aerotow: populate tug pilot, clear winch driver
-        setToggleValue('editTugPilot',    flight.towPilot || '', tugPilots);
-        setToggleValue('editWinchDriver', '',                    winchDrivers);
-        document.getElementById('editMergeGroup').style.display = 'none';
-        document.getElementById('editMergeSelect').value = '';
-      } else {
-        tugInfo.textContent = 'No tug assigned';
-        // Could be winch launch: populate winch driver from TowPilot
-        setToggleValue('editTugPilot',    '',                    tugPilots);
-        setToggleValue('editWinchDriver', flight.towPilot || '', winchDrivers);
-        document.getElementById('editMergeGroup').style.display = 'block';
-        populateMergeCandidates('editMergeSelect', flight.flightKey);
-      }
+  // Tug-only (orphan) flights have no glider - Glider/CN/Type/Landing/
+  // Pilot/Pax/Payer don't apply. Lock them and drop the required
+  // attribute on Glider/Type so the form can actually be saved (see
+  // updateFlight in WebApp.gs for the matching server-side guard).
+  var isTugOnly = !flight.glider;
+  document.getElementById('editGlider').required = !isTugOnly;
+  document.getElementById('editType').required   = !isTugOnly;
+  ['editGlider', 'editCN', 'editType', 'editLanding', 'editPayer'].forEach(function(id) {
+    var el = document.getElementById(id);
+    el.disabled = isTugOnly;
+    el.closest('.form-group').classList.toggle('locked', isTugOnly);
+  });
+  _setFieldLocked('editPilot', isTugOnly);
+  _setFieldLocked('editPax',   isTugOnly);
 
-      openModal('editFlightModal');
-    }
+  // Tug info display
+  var tugInfo = document.getElementById('editTugInfo');
+  if (flight.towPlane) {
+    tugInfo.textContent = 'Tug: ' + flight.towPlane +
+      (flight.towType   ? ' (' + flight.towType + ')' : '') +
+      (flight.towMaxAlt ? ' • Max Alt: ' + flight.towMaxAlt : '');
+    // Aerotow: populate tug pilot, clear winch driver
+    setToggleValue('editTugPilot',    flight.towPilot || '', tugPilots);
+    setToggleValue('editWinchDriver', '',                    winchDrivers);
+    document.getElementById('editMergeGroup').style.display = 'none';
+    document.getElementById('editMergeSelect').value = '';
+  } else {
+    tugInfo.textContent = 'No tug assigned';
+    // Could be winch launch: populate winch driver from TowPilot
+    setToggleValue('editTugPilot',    '',                    tugPilots);
+    setToggleValue('editWinchDriver', flight.towPilot || '', winchDrivers);
+    document.getElementById('editMergeGroup').style.display = 'block';
+    populateMergeCandidates('editMergeSelect', flight.flightKey);
+  }
 
+  openModal('editFlightModal');
+}
     function openEditTugModal() {
       var list = document.getElementById('tugFlightsList');
       list.innerHTML = '';
