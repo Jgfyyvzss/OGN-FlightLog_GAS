@@ -899,18 +899,37 @@
       return card;
     }
 
-    function selectFlight(flight, cardEl) {
-      document.querySelectorAll('.flight-card').forEach(function(c) { c.classList.remove('selected'); });
-      cardEl.classList.add('selected');
-      selectedFlight = flight;
-      document.getElementById('editFlightBtn').disabled = false;
+    function _setFieldLocked(field, locked) {
+  var wrapper = document.getElementById('tf-' + field);
+  if (!wrapper) return;
+  wrapper.classList.toggle('locked', locked);
+  wrapper.querySelectorAll('select, input, button').forEach(function(el) {
+    el.disabled = locked;
+  });
+}
 
-      if (flight.payer) document.getElementById('payerSelect').value = flight.payer;
+function selectFlight(flight, cardEl) {
+  document.querySelectorAll('.flight-card').forEach(function(c) { c.classList.remove('selected'); });
+  cardEl.classList.add('selected');
+  selectedFlight = flight;
+  document.getElementById('editFlightBtn').disabled = false;
 
-      setToggleValue('pilot',       flight.pilot || '',      pilots);
-      setToggleValue('pax',         flight.pax   || '',      instructors);
-      setToggleValue('winchDriver', flight.towPilot || '',   winchDrivers);
-    }
+  if (flight.payer) document.getElementById('payerSelect').value = flight.payer;
+
+  setToggleValue('pilot',       flight.pilot || '',      pilots);
+  setToggleValue('pax',         flight.pax   || '',      instructors);
+  setToggleValue('winchDriver', flight.towPilot || '',   winchDrivers);
+
+  // Tug-only (orphan) flights have no glider - Pilot/Pax/Payer don't apply.
+  // Lock them so a Pilot can't be entered against a gliderless row (breaks
+  // Manager/Reckon export - see X_Validation.gs). Tow Pilot stays open and
+  // optional below - that's the only field relevant to a tug row.
+  var isTugOnly = !flight.glider;
+  _setFieldLocked('pilot', isTugOnly);
+  _setFieldLocked('pax',   isTugOnly);
+  document.getElementById('payerSelect').disabled = isTugOnly;
+  document.getElementById('payerSelect').parentElement.classList.toggle('locked', isTugOnly);
+}
 
     // ── Refresh ────────────────────────────────────────────────────────
     function refreshFlights() {
@@ -946,75 +965,78 @@
 
     // ── Main form submit ───────────────────────────────────────────────
     function handleSubmit(e) {
-      e.preventDefault();
+  e.preventDefault();
 
-      if (!selectedFlight) { showAlert('Please select a flight', 'error'); return; }
+  if (!selectedFlight) { showAlert('Please select a flight', 'error'); return; }
 
-      var pilot       = getToggleValue('pilot');
-      var pax         = getToggleValue('pax');
-      var winchDriver = getToggleValue('winchDriver');
-      var payer       = document.getElementById('payerSelect').value;
-      var remarks     = document.getElementById('remarksInput').value;
+  var isTugOnly   = !selectedFlight.glider;
+  var pilot       = isTugOnly ? '' : getToggleValue('pilot');
+  var pax         = isTugOnly ? '' : getToggleValue('pax');
+  var winchDriver = getToggleValue('winchDriver');
+  var payer       = isTugOnly ? '' : document.getElementById('payerSelect').value;
+  var remarks     = document.getElementById('remarksInput').value;
 
-      if (!pilot) { showAlert('Please enter pilot name', 'error'); return; }
+  if (!isTugOnly && !pilot) { showAlert('Please enter pilot name', 'error'); return; }
 
-      var submitBtn = document.getElementById('submitBtn');
-      submitBtn.disabled = true;
-      submitBtn.textContent = 'Submitting...';
+  var submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting...';
 
-      google.script.run
-        .withSuccessHandler(function(result) {
-          if (result.success) {
-            showAlert(result.message, 'success');
-            setTimeout(function() {
-              google.script.run
-                .withSuccessHandler(function(data) {
-                  flights = data || [];
-                  populateFlights();
-                  selectedFlight = null;
-                  document.getElementById('pilotSelect').value       = '';
-                  document.getElementById('paxSelect').value         = '';
-                  document.getElementById('winchDriverSelect').value = '';
-                  document.getElementById('payerSelect').value       = '';
-                  document.getElementById('remarksInput').value      = '';
-                  document.getElementById('editFlightBtn').disabled  = true;
-                  // Reset visitor toggles
-                  ['pilot','pax','winchDriver'].forEach(function(f) {
-                    if (toggleState[f].isVisitor) toggleVisitorField(f, false);
-                  });
-                  submitBtn.disabled = false;
-                  submitBtn.textContent = 'Submit Flight Log';
-                })
-                .withFailureHandler(function(err) {
-                  showAlert('Flight logged but error refreshing: ' + err.message, 'error');
-                  submitBtn.disabled = false;
-                  submitBtn.textContent = 'Submit Flight Log';
-                })
-                .getFlightsForWebapp();
-            }, 1500);
-          } else {
-            showAlert(result.message, 'error');
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Submit Flight Log';
-          }
-        })
-        .withFailureHandler(function(err) {
-          showAlert('Error: ' + err.message, 'error');
-          submitBtn.disabled = false;
-          submitBtn.textContent = 'Submit Flight Log';
-        })
-        .submitPilotData(
-          selectedFlight.flightKey,
-          pilot,
-          pax,
-          payer,
-          toggleState.pilot.visitorFlag,
-          toggleState.pax.visitorFlag,
-          winchDriver,
-          remarks
-        );
-    }
-
+  google.script.run
+    .withSuccessHandler(function(result) {
+      if (result.success) {
+        showAlert(result.message, 'success');
+        setTimeout(function() {
+          google.script.run
+            .withSuccessHandler(function(data) {
+              flights = data || [];
+              populateFlights();
+              selectedFlight = null;
+              document.getElementById('pilotSelect').value       = '';
+              document.getElementById('paxSelect').value         = '';
+              document.getElementById('winchDriverSelect').value = '';
+              document.getElementById('payerSelect').value       = '';
+              document.getElementById('remarksInput').value      = '';
+              document.getElementById('editFlightBtn').disabled  = true;
+              _setFieldLocked('pilot', false);
+              _setFieldLocked('pax',   false);
+              document.getElementById('payerSelect').disabled = false;
+              document.getElementById('payerSelect').parentElement.classList.remove('locked');
+              ['pilot','pax','winchDriver'].forEach(function(f) {
+                if (toggleState[f].isVisitor) toggleVisitorField(f, false);
+              });
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Submit Flight Log';
+            })
+            .withFailureHandler(function(err) {
+              showAlert('Flight logged but error refreshing: ' + err.message, 'error');
+              submitBtn.disabled = false;
+              submitBtn.textContent = 'Submit Flight Log';
+            })
+            .getFlightsForWebapp();
+        }, 1500);
+      } else {
+        showAlert(result.message, 'error');
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Flight Log';
+      }
+    })
+    .withFailureHandler(function(err) {
+      showAlert('Error: ' + err.message, 'error');
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Submit Flight Log';
+    })
+    .submitPilotData(
+      selectedFlight.flightKey,
+      pilot,
+      pax,
+      payer,
+      toggleState.pilot.visitorFlag,
+      toggleState.pax.visitorFlag,
+      winchDriver,
+      remarks
+    );
+}
     // ── Modal helpers ──────────────────────────────────────────────────
     function openModal(id)  { document.getElementById(id).classList.add('active'); }
     function closeModal(id) { document.getElementById(id).classList.remove('active'); }
