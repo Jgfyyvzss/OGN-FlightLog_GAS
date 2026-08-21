@@ -180,10 +180,11 @@ function _mergeAwayRow(sheet, cols, mergeFlightKey) {
  * @param {string} paxVisitor    - 'Y' or ''
  * @param {string} winchDriver   - name or '' (writes to TowPilot)
  */
+
 function submitPilotData(flightKey, pilot, pax, payer, pilotVisitor, paxVisitor, winchDriver, remarks) {
   try {
-    if (!flightKey || !pilot) {
-      return { success: false, message: "Flight and Pilot are required" };
+    if (!flightKey) {
+      return { success: false, message: "Flight is required" };
     }
 
     const sheetName = FLIGHT_LOG_SHEET_NAME;
@@ -210,6 +211,27 @@ function submitPilotData(flightKey, pilot, pax, payer, pilotVisitor, paxVisitor,
 
     const sheetRow = rowIndex + 2;
 
+    // Gliderless (orphan tug) row - Pilot/Pax/Payer don't apply and are
+    // never written, regardless of what the client sends (see
+    // X_Validation.gs - a Pilot on a gliderless row breaks Manager/Reckon
+    // export). Only TowPilot and Remarks are relevant, and TowPilot is
+    // optional - ground crew often don't know which tug pilot flew which tow.
+    const isTugOnly = !data[rowIndex][cols.Glider - 1];
+
+    if (isTugOnly) {
+      if (winchDriver !== undefined && winchDriver !== null) {
+        sheet.getRange(sheetRow, cols.TowPilot).setValue(winchDriver);
+      }
+      if (remarks !== undefined) {
+        sheet.getRange(sheetRow, cols.Remarks).setValue(String(remarks || '').slice(0, 80));
+      }
+      return { success: true, message: "Tug flight updated successfully!" };
+    }
+
+    if (!pilot) {
+      return { success: false, message: "Flight and Pilot are required" };
+    }
+
     sheet.getRange(sheetRow, cols.Visitor).setValue(pilotVisitor || "");
     sheet.getRange(sheetRow, cols.Pilot).setValue(pilot);
     sheet.getRange(sheetRow, cols.PaxVisitor).setValue(paxVisitor || "");
@@ -219,12 +241,10 @@ function submitPilotData(flightKey, pilot, pax, payer, pilotVisitor, paxVisitor,
     if (payer !== undefined) {
       sheet.getRange(sheetRow, cols.Payer).setValue(payer);
     }
-    // Winch driver writes to TowPilot — only overwrite if a value was provided,
-    // so that aerotow TowPilot set via Edit Tugs is not accidentally cleared.
     if (winchDriver !== undefined && winchDriver !== null) {
       sheet.getRange(sheetRow, cols.TowPilot).setValue(winchDriver);
     }
-     if (remarks !== undefined) {
+    if (remarks !== undefined) {
       sheet.getRange(sheetRow, cols.Remarks).setValue(String(remarks || '').slice(0, 80));
     }
 
