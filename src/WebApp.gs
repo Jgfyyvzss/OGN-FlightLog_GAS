@@ -457,33 +457,15 @@ function updateFlight(flightData) {
 
     const sheetRow = rowIndex + 2;
 
-    let gTime = "";
-    if (flightData.gLanding) {
-      const takeoff = parseTime(flightData.takeOff);
-      const landing = parseTime(flightData.gLanding);
-      if (takeoff && landing) {
-        const durationMinutes = (landing.hour * 60 + landing.minute) - (takeoff.hour * 60 + takeoff.minute);
-        if (durationMinutes > 0) {
-          const hours = Math.floor(durationMinutes / 60);
-          const minutes = durationMinutes % 60;
-          gTime = String(hours).padStart(2, '0') + 'h' + String(minutes).padStart(2, '0');
-        }
-      }
-    }
+    // Gliderless (orphan tug) row - Glider/CN/Type/Landing/FlightTime/
+    // Pilot/Pax/Payer don't apply and are never written here, regardless
+    // of what the client sends (see X_Validation.gs - a Pilot on a
+    // gliderless row breaks Manager/Reckon export). Only Date, TakeOff,
+    // Remarks, TowPilot (and merge) are editable for a tug-only row.
+    const isTugOnly = !data[rowIndex][cols.Glider - 1];
 
     sheet.getRange(sheetRow, cols.Date).setValue("'" + flightData.date);
-    sheet.getRange(sheetRow, cols.Glider).setValue(flightData.glider);
-    sheet.getRange(sheetRow, cols.CN).setValue(flightData.cn || "");
-    sheet.getRange(sheetRow, cols.Type).setValue(flightData.type);
     sheet.getRange(sheetRow, cols.TakeOff).setValue(flightData.takeOff);
-    sheet.getRange(sheetRow, cols.Landing).setValue(flightData.gLanding || "");
-    sheet.getRange(sheetRow, cols.FlightTime).setValue(gTime);
-    sheet.getRange(sheetRow, cols.Visitor).setValue(flightData.pilotVisitor || "");
-    sheet.getRange(sheetRow, cols.Pilot).setValue(flightData.pilot || "");
-    sheet.getRange(sheetRow, cols.PaxVisitor).setValue(flightData.paxVisitor || "");
-    sheet.getRange(sheetRow, cols.Pax).setValue(flightData.pax || "");
-    sheet.getRange(sheetRow, cols.Payer).setValue(flightData.payer || "");
-    // TowPilot: receives either the aerotow tug pilot or the winch driver
     sheet.getRange(sheetRow, cols.TowPilot).setValue(flightData.towPilot || mergedTow.towPilot || "");
     if (mergedTow.towPlane) {
       sheet.getRange(sheetRow, cols.TowPlane).setValue(mergedTow.towPlane);
@@ -495,6 +477,33 @@ function updateFlight(flightData) {
     sheet.getRange(sheetRow, cols.Remarks).setValue(String(flightData.remarks || '').slice(0, 80));
     sheet.getRange(sheetRow, cols.Timestamp).setValue(new Date());
 
+    if (!isTugOnly) {
+      let gTime = "";
+      if (flightData.gLanding) {
+        const takeoff = parseTime(flightData.takeOff);
+        const landing = parseTime(flightData.gLanding);
+        if (takeoff && landing) {
+          const durationMinutes = (landing.hour * 60 + landing.minute) - (takeoff.hour * 60 + takeoff.minute);
+          if (durationMinutes > 0) {
+            const hours = Math.floor(durationMinutes / 60);
+            const minutes = durationMinutes % 60;
+            gTime = String(hours).padStart(2, '0') + 'h' + String(minutes).padStart(2, '0');
+          }
+        }
+      }
+
+      sheet.getRange(sheetRow, cols.Glider).setValue(flightData.glider);
+      sheet.getRange(sheetRow, cols.CN).setValue(flightData.cn || "");
+      sheet.getRange(sheetRow, cols.Type).setValue(flightData.type);
+      sheet.getRange(sheetRow, cols.Landing).setValue(flightData.gLanding || "");
+      sheet.getRange(sheetRow, cols.FlightTime).setValue(gTime);
+      sheet.getRange(sheetRow, cols.Visitor).setValue(flightData.pilotVisitor || "");
+      sheet.getRange(sheetRow, cols.Pilot).setValue(flightData.pilot || "");
+      sheet.getRange(sheetRow, cols.PaxVisitor).setValue(flightData.paxVisitor || "");
+      sheet.getRange(sheetRow, cols.Pax).setValue(flightData.pax || "");
+      sheet.getRange(sheetRow, cols.Payer).setValue(flightData.payer || "");
+    }
+
     return { success: true, message: "Flight updated successfully!" };
 
   } catch (error) {
@@ -502,7 +511,6 @@ function updateFlight(flightData) {
     return { success: false, message: "Error: " + error.toString() };
   }
 }
-
 /**
  * Update tug pilot data for multiple flights (Edit Tugs modal).
  * @param {Array} updates - Array of {flightKey, towPilot}
