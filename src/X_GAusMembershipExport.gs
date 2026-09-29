@@ -62,7 +62,9 @@ const GAUS_MEMBERSHIP_VALID_DAYS = 30;
 
 /**
  * Webapp entry point - called from serveAccountingExportsPage
- * (AccountingExportsPage.gs). Returns { tsv, summary } or { error }.
+ * (AccountingExportsPage.gs). Saves the same Drive copy the menu path does
+ * before returning, so a failed copy/paste into Manager isn't a lost export.
+ * Returns { tsv, summary, batchId } or { error }.
  */
 function runGAusMembershipExportFromWebapp(password) {
   const expectedPassword = Config.get('EXPORT_PASSWORD');
@@ -70,8 +72,18 @@ function runGAusMembershipExportFromWebapp(password) {
     return { error: 'Incorrect password.' };
   }
   try {
-    const { tsv, summary } = generateGAusMembershipExport();
-    return { tsv, summary };
+    const { tsv, summary, batchId } = generateGAusMembershipExport();
+
+    // Same as every other webapp export (runManagerExportFromWebapp etc.):
+    // a Drive copy is the recovery path if the copy/paste into Manager
+    // fails partway, or the browser tab is closed before it's pasted.
+    if (tsv) {
+      getExportFolder().createFile(
+        Utilities.newBlob(tsv, 'text/csv', 'GAusMembershipExport_' + batchId + '.csv')
+      );
+    }
+
+    return { tsv, summary, batchId };
   } catch (e) {
     return { error: e.message };
   }
@@ -81,11 +93,10 @@ function runGAusMembershipExportFromWebapp(password) {
  * Menu entry point - saves to Drive.
  */
 function runGAusMembershipExport() {
-  const batchId = X_ExportBase.makeBatchId();
-  X_Audit.log('EXPORT_START', GAUS_MEMBERSHIP_EXPORT_ID, batchId);
+  X_Audit.log('EXPORT_START', GAUS_MEMBERSHIP_EXPORT_ID);
 
   try {
-    const { tsv, summary, customerCount, flightCount } = generateGAusMembershipExport();
+    const { tsv, summary, customerCount, flightCount, batchId } = generateGAusMembershipExport();
 
     if (!tsv) {
       SpreadsheetApp.getUi().alert('No un-exported AEF memberships found.');
@@ -104,7 +115,7 @@ function runGAusMembershipExport() {
     );
 
   } catch (e) {
-    X_Audit.log('EXPORT_ERROR', GAUS_MEMBERSHIP_EXPORT_ID, batchId, { notes: e.message });
+    X_Audit.log('EXPORT_ERROR', GAUS_MEMBERSHIP_EXPORT_ID, null, { notes: e.message });
     SpreadsheetApp.getUi().alert('Export failed: ' + e.message);
     throw e;
   }
@@ -183,7 +194,7 @@ function _recentCustomers(allFlights) {
 
 /**
  * Core logic - shared by menu and webapp.
- * @returns {{ tsv, summary, customerCount, flightCount }}
+ * @returns {{ tsv, summary, customerCount, flightCount, batchId }}
  */
 function generateGAusMembershipExport() {
   const supplier = Config.get('GAUS_SUPPLIER_NAME');
@@ -206,7 +217,7 @@ function generateGAusMembershipExport() {
   );
 
   if (eligible.length === 0) {
-    return { tsv: '', summary: 'No eligible AEF flights found.', customerCount: 0, flightCount: 0 };
+    return { tsv: '', summary: 'No eligible AEF flights found.', customerCount: 0, flightCount: 0, batchId };
   }
 
   // One membership per customer, dated and described by that customer's
@@ -299,7 +310,8 @@ function generateGAusMembershipExport() {
     tsv,
     summary:       summaryLines.join('\n'),
     customerCount: customers.size,
-    flightCount:   eligible.length
+    flightCount:   eligible.length,
+    batchId
   };
 }
 
