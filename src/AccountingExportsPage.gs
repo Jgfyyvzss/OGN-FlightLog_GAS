@@ -6,6 +6,7 @@
  * accounting-related exports to a club treasurer/admin without needing to open
  * the spreadsheet:
  *   - Flight Invoices (Manager.io)   - X_ManagerExport.gs
+ *   - AEF Memberships                - X_GAusMembershipExport.gs
  *   - Flight Invoices (Reckon IIF)   - X_ReckonExport.gs
  *   - Tow / Winch Driver Credits     - X_TowCreditExport.gs
  *   - Instructor Credits             - X_InstructorCreditExport.gs
@@ -22,6 +23,8 @@
  *   - unset      -> both sections shown
  *   - 'MANAGER'  -> only Flight Invoices (Manager) shown
  *   - 'RECKON'   -> only Reckon (IIF) shown
+ * AEF Memberships sits inside the Manager block: it emits a Manager.io
+ * purchase invoice import, so it is meaningless under RECKON.
  * Credit exports are shown regardless (accounting-system agnostic for now).
  *
  * Page heading/title use Config.CLUB_ABBREVIATION, same as the pilot-entry
@@ -63,6 +66,13 @@ ${showManager ? `
 <div id="runError" class="error"></div>
 <div id="runMsg" class="msg"></div>
 <textarea id="runTsv"></textarea>
+
+<hr>
+<h3>AEF Memberships</h3>
+<button id="gausBtn" onclick="runExport('runGAusMembershipExportFromWebapp','gaus','Purchase Invoices','paste')">Export AEF Memberships</button>
+<div id="gausError" class="error"></div>
+<div id="gausMsg" class="msg"></div>
+<textarea id="gausTsv"></textarea>
 ` : ''}
 
 <hr>

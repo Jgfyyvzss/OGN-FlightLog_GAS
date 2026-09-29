@@ -126,11 +126,6 @@ const Invoicing = (() => {
     };
   }
 
-  function countFlightLines(flight) {
-    if (flight.payer === PAYER.SELF_LAUNCH) return 1;
-    return 2;
-  }
-
   /** Append truncated remarks to a base line description, if present. */
   function _withRemarks(base, remarks) {
     if (!remarks) return base;
@@ -261,7 +256,6 @@ const Invoicing = (() => {
     payerPriceMultiplier,
     groupFlightsByCustomer,
     gliderInfo,
-    countFlightLines,
     buildFlightLines,
     buildInvoices
   };
