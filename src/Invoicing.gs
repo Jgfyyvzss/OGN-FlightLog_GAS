@@ -126,6 +126,21 @@ const Invoicing = (() => {
     };
   }
 
+  /**
+   * "yyyy-mm-dd HH:MM" label opening every flight line description.
+   *
+   * Takeoff time is included because the date alone can't separate two
+   * flights that need separating - most importantly two different AEF
+   * customers who share a name, where the name is also the invoice
+   * Reference. Time is dropped silently when unknown (the HTML scraper
+   * fallback doesn't always populate it) rather than leaving a dangling
+   * separator.
+   */
+  function _whenLabel(flight) {
+    const t = formatClockTime(flight.takeOff);
+    return t ? `${flight.date} ${t}` : `${flight.date}`;
+  }
+
   /** Append truncated remarks to a base line description, if present. */
   function _withRemarks(base, remarks) {
     if (!remarks) return base;
@@ -156,7 +171,7 @@ const Invoicing = (() => {
     lines.push({
       item: 'FT',
       description: _withRemarks(
-        `${flight.date} – ${flight.glider} – ${flight.type} – Flight time`,
+        `${_whenLabel(flight)} – ${flight.glider} – ${flight.type} – Flight time`,
         flight.remarks
       ),
       qty: (flightMinutes * splitRatio).toFixed(2),
@@ -188,7 +203,7 @@ const Invoicing = (() => {
 
       lines.push({
         item: 'AT',
-        description: _withRemarks(`${flight.date} – ${flight.glider} – Aerotow`, flight.remarks),
+        description: _withRemarks(`${_whenLabel(flight)} – ${flight.glider} – Aerotow`, flight.remarks),
         qty: (towQty * splitRatio).toFixed(2),
         unitPrice: (towRate * multiplier).toFixed(2),
         division: division
@@ -206,7 +221,7 @@ const Invoicing = (() => {
 
       lines.push({
         item: 'WL',
-        description: _withRemarks(`${flight.date} – ${flight.glider} – Winch launch`, flight.remarks),
+        description: _withRemarks(`${_whenLabel(flight)} – ${flight.glider} – Winch launch`, flight.remarks),
         qty: splitRatio.toFixed(2),
         unitPrice: (winchRate * multiplier).toFixed(2),
         division: division

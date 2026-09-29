@@ -219,14 +219,9 @@ function deriveTowHeight(f) {
  * or "HHMM" (e.g. "1138"). Returns '' for blank/unparseable input.
  */
 function formatSGGCTime(timeStr) {
-  if (!timeStr) return '';
-
-  const parsed = parseTime(timeStr);  // shared helper in FlightUtils.gs
-  if (!parsed) return '';
-
-  const hh = String(parsed.hour).padStart(2, '0');
-  const mm = String(parsed.minute).padStart(2, '0');
-  return `${hh}:${mm}`;
+  // Delegates to the shared helper in FlightUtils.gs - this used to hold its
+  // own copy of the same HH:MM formatting that invoice lines now also need.
+  return formatClockTime(timeStr);
 }
 
 /**

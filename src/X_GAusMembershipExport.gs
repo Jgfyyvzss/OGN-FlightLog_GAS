@@ -22,6 +22,14 @@
  *   Lines.1.Item | Lines.1.LineDescription | Lines.1.Qty |
  *   Lines.1.PurchaseUnitPrice
  *
+ * IssueDate is the customer's earliest AEF flight date in the run, not the
+ * date the export was run: the liability to GAus is incurred on the flight
+ * day (the same principle as X_AEFAccrualExport.gs), and it means the date
+ * shown when allocating a GAus payment matches the flight being looked for.
+ * A consequence worth knowing: running the export over a long backlog will
+ * date invoices into earlier periods, which Manager may refuse if those
+ * periods are locked.
+ *
  * Deliberately omitted:
  *   Lines.1.Account   - the Item drives the account inside Manager
  *   Lines.1.Division  - Division identifies the glider; a membership is not
@@ -103,6 +111,44 @@ function runGAusMembershipExport() {
 }
 
 /**
+ * Normalise a flight date for use as the invoice IssueDate.
+ *
+ * The membership liability is incurred on the flight day, not on the day the
+ * export happens to run, so the invoice is dated accordingly - and the date
+ * shown when allocating a payment in Manager then matches the flight the
+ * treasurer is looking for.
+ *
+ * Flights.load() reads cells raw: unlike getFlightsFromSheet in
+ * DataWriter.gs it neither strips the apostrophe that forces text storage
+ * nor rejects Date objects. IssueDate is load-bearing for the Manager
+ * import, so an unrecognisable value falls back to the run date rather than
+ * producing a row Manager will reject.
+ */
+function _membershipInvoiceDate(flightDate, fallbackISO) {
+  const s = String(flightDate == null ? '' : flightDate).replace(/^'/, '').trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : fallbackISO;
+}
+
+/**
+ * True when flight f took off before the earliest flight held so far.
+ * Compared by date then by takeoff time; a flight with no date never wins,
+ * and a held entry with no date always loses.
+ */
+function _isEarlierFlight(f, current) {
+  const fd = String(f.date || '').trim();
+  const cd = String(current.date || '').trim();
+  if (!fd) return false;
+  if (!cd) return true;
+  if (fd !== cd) return fd < cd;
+
+  const ft = parseTime(f.takeOff);
+  const ct = parseTime(current.takeOff);
+  if (!ft) return false;
+  if (!ct) return true;
+  return (ft.hour * 60 + ft.minute) < (ct.hour * 60 + ct.minute);
+}
+
+/**
  * Customers whose membership was exported within the validity window.
  *
  * ExportState stores flight keys, not names, so recent keys are mapped back
@@ -163,16 +209,19 @@ function generateGAusMembershipExport() {
     return { tsv: '', summary: 'No eligible AEF flights found.', customerCount: 0, flightCount: 0 };
   }
 
-  // One membership per customer. Earliest flight date is carried onto the
-  // line description so the invoice points at the visit that triggered it.
-  const customers = new Map();   // name -> { earliestDate, flightCount }
+  // One membership per customer, dated and described by that customer's
+  // earliest flight in this run - the visit that incurred the membership.
+  const customers = new Map();   // name -> { date, takeOff, flightCount }
   eligible.forEach(f => {
     const name = f.pilot.trim();
     if (!customers.has(name)) {
-      customers.set(name, { earliestDate: f.date, flightCount: 0 });
+      customers.set(name, { date: f.date, takeOff: f.takeOff, flightCount: 0 });
     }
     const c = customers.get(name);
-    if (f.date && (!c.earliestDate || f.date < c.earliestDate)) c.earliestDate = f.date;
+    if (_isEarlierFlight(f, c)) {
+      c.date    = f.date;
+      c.takeOff = f.takeOff;
+    }
     c.flightCount++;
   });
 
@@ -193,14 +242,17 @@ function generateGAusMembershipExport() {
   const warnings = [];
 
   customers.forEach((c, name) => {
+    const invoiceDate = _membershipInvoiceDate(c.date, issueDate);
+    const takeOff     = formatClockTime(c.takeOff);
+
     rows.push([
-      issueDate,
+      invoiceDate,                             // flight date, not the run date
       name,                                    // Reference - the traceability key
       supplier,
       'AEF Short Term Membership — ' + name,
       'True',
       itemCode,
-      'AEF flight ' + (c.earliestDate || ''),
+      'AEF flight ' + invoiceDate + (takeOff ? ' ' + takeOff : ''),
       '1',
       fee.toFixed(2)
     ]);
