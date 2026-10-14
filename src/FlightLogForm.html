@@ -297,6 +297,20 @@
         <div id="flightList"></div>
       </div>
 
+      <!-- Charge to — sits ABOVE the Pilot field on purpose: selecting AEF
+           here retitles/locks the Pilot field below, so the operator sets
+           this first and then scrolls to an already-correct Pilot field. -->
+      <div class="form-group">
+        <label>Charge to</label>
+        <select id="payerSelect">
+          <option value="">Pilot</option>
+          <option value="AEF">AEF</option>
+          <option value="Shared">Shared</option>
+          <option value="No Charge">No Charge</option>
+          <option value="Self Launch">Self Launch</option>
+        </select>
+      </div>
+
       <!-- Invoiced Pilot / Student / AEF -->
       <div class="form-group toggle-field" id="tf-pilot">
         <label>Invoiced Pilot / Student / AEF <span class="required">*</span></label>
@@ -321,18 +335,6 @@
         <button type="button" class="toggle-btn" data-field="winchDriver">Visitor</button>
       </div>
 
-      <!-- Special Billing -->
-      <div class="form-group">
-        <label>Special Billing</label>
-        <select id="payerSelect">
-          <option value=""></option>
-          <option value="AEF">AEF</option>
-          <option value="Shared">Shared</option>
-          <option value="No Charge">No Charge</option>
-          <option value="Self Launch">Self Launch</option>
-        </select>
-      </div>
-     
       <!-- Remarks -->
       <div class="form-group">
         <label>Remarks</label>
@@ -392,6 +394,18 @@
           <input type="time" id="addGliderLanding">
         </div>
 
+        <!-- Charge to — above the Pilot row, same reasoning as the main form. -->
+        <div class="form-group">
+          <label>Charge to</label>
+          <select id="addGliderPayer">
+            <option value="">Pilot</option>
+            <option value="AEF">AEF</option>
+            <option value="Shared">Shared</option>
+            <option value="No Charge">No Charge</option>
+            <option value="Self Launch">Self Launch</option>
+          </select>
+        </div>
+
         <div class="form-row">
           <div class="form-group toggle-field" id="tf-addGliderPilot">
             <label>Pilot</label>
@@ -405,17 +419,6 @@
             <input type="text" id="addGliderPaxText" class="visitor-input" placeholder="Enter visitor / AEF No.">
             <button type="button" class="toggle-btn" data-field="addGliderPax">Visitor</button>
           </div>
-        </div>
-
-        <div class="form-group">
-          <label>Special Billing</label>
-          <select id="addGliderPayer">
-            <option value=""></option>
-            <option value="AEF">AEF</option>
-            <option value="Shared">Shared</option>
-            <option value="No Charge">No Charge</option>
-            <option value="Self Launch">Self Launch</option>
-          </select>
         </div>
 
         <div class="section-header">Tug (Optional)</div>
@@ -529,6 +532,18 @@
           <input type="time" id="editLanding">
         </div>
 
+        <!-- Charge to — above the Pilot row, same reasoning as the main form. -->
+        <div class="form-group">
+          <label>Charge to</label>
+          <select id="editPayer">
+            <option value="">Pilot</option>
+            <option value="AEF">AEF</option>
+            <option value="Shared">Shared</option>
+            <option value="No Charge">No Charge</option>
+            <option value="Self Launch">Self Launch</option>
+          </select>
+        </div>
+
         <div class="form-row">
           <div class="form-group toggle-field" id="tf-editPilot">
             <label>Pilot</label>
@@ -544,17 +559,6 @@
           </div>
         </div>
 
-        <div class="form-group">
-          <label>Special Billing</label>
-          <select id="editPayer">
-            <option value=""></option>
-          <option value="AEF">AEF</option>
-          <option value="Shared">Shared</option>
-          <option value="No Charge">No Charge</option>
-          <option value="Self Launch">Self Launch</option>
-          </select>
-        </div>
-        
         <div class="form-group">
           <label>Remarks</label>
           <input type="text" id="editRemarks" maxlength="80" placeholder="e.g. cable break, No Charge reason">
@@ -667,7 +671,14 @@
         if (selectEl) { selectEl.style.display = 'none'; selectEl.removeAttribute('required'); }
         if (textEl)   { textEl.classList.add('active'); }
       } else {
-        if (selectEl) { selectEl.style.display = 'block'; }
+        if (selectEl) {
+          selectEl.style.display = 'block';
+          // Restore `required` only if this select carried it originally
+          // (captured in setupToggleListeners). Setting it unconditionally
+          // would make every optional toggle-field select required and
+          // block submission on an empty Pax / Winch Driver dropdown.
+          if (state.wasRequired) selectEl.setAttribute('required', '');
+        }
         if (textEl)   { textEl.classList.remove('active'); }
       }
 
@@ -718,11 +729,102 @@
       document.getElementById('addTugDate').value    = today;
     });
 
+    /**
+     * Maps each "Charge to" select to the Pilot toggle-field it governs,
+     * plus the placeholder text for AEF vs normal mode.
+     * Keys are element ids; pilotField values are toggleState keys.
+     */
+    var CHARGE_TO_FIELDS = {
+      payerSelect:    { pilotField: 'pilot',          normalPlaceholder: 'Enter visitor pilot name' },
+      addGliderPayer: { pilotField: 'addGliderPilot',  normalPlaceholder: 'Enter visitor pilot' },
+      editPayer:      { pilotField: 'editPilot',       normalPlaceholder: 'Enter visitor pilot' }
+    };
+
+    var AEF_PILOT_PLACEHOLDER = 'Enter AEF customer name';
+
+    /**
+     * Keep a Pilot field in step with its "Charge to" select.
+     *
+     * Charge to = AEF forces the Pilot field into visitor mode and disables
+     * its Visitor/Regular button, so the only way to fill it is to type the
+     * AEF customer's name. That name becomes the invoice Reference for both
+     * the AEF sales invoice and the GAus membership purchase invoice, so it
+     * must be the customer, never a member picked from the list.
+     *
+     * Leaving AEF restores the button and placeholder but deliberately does
+     * NOT force visitor mode off - a normal flight can legitimately have a
+     * visitor pilot, and forcing it would discard an already-typed name.
+     *
+     * Must be called explicitly wherever the select is set in code:
+     * assigning .value never fires a change event.
+     */
+    function syncChargeToPilotField(payerSelectId) {
+      var map = CHARGE_TO_FIELDS[payerSelectId];
+      if (!map) return;
+
+      var sel     = document.getElementById(payerSelectId);
+      var wrapper = document.getElementById('tf-' + map.pilotField);
+      if (!sel || !wrapper) return;
+
+      var textEl = wrapper.querySelector('.visitor-input');
+      var btnEl  = wrapper.querySelector('.toggle-btn');
+      var isAef  = (sel.value === 'AEF');
+
+      if (isAef) {
+        toggleVisitorField(map.pilotField, true);
+        if (textEl) textEl.placeholder = AEF_PILOT_PLACEHOLDER;
+        if (btnEl) {
+          btnEl.disabled = true;
+          btnEl.title = 'AEF flights are billed against the customer name';
+        }
+      } else {
+        if (textEl) textEl.placeholder = map.normalPlaceholder;
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.title = '';
+        }
+      }
+    }
+
+    /**
+     * Client-side mirror of _validateAefPilot in WebApp.gs. Returns an error
+     * message, or '' when the AEF customer name is acceptable. Kept in step
+     * with the server guard - the server is the authority, this just gives
+     * immediate feedback instead of a round trip.
+     */
+    function _aefPilotError(payer, pilot, pilotVisitorFlag) {
+      if (payer !== 'AEF') return '';
+      var name = String(pilot || '').trim();
+      if (!name) return "AEF flights require the customer's name in the Pilot field.";
+      if (pilotVisitorFlag !== 'Y') {
+        return "AEF flights require the customer's name to be typed in, " +
+               "not selected from the member list.";
+      }
+      return '';
+    }
+
     function setupToggleListeners() {
       document.querySelectorAll('.toggle-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
           toggleVisitorField(btn.getAttribute('data-field'));
         });
+      });
+
+      // Record which toggle-field selects are `required` in the markup, so
+      // toggleVisitorField can restore the attribute when leaving visitor
+      // mode. Only pilotSelect carries it today; capturing rather than
+      // hardcoding keeps this correct if another field gains it later.
+      Object.keys(toggleState).forEach(function(field) {
+        var wrapper = document.getElementById('tf-' + field);
+        var sel = wrapper && wrapper.querySelector('select');
+        toggleState[field].wasRequired = !!(sel && sel.hasAttribute('required'));
+      });
+
+      Object.keys(CHARGE_TO_FIELDS).forEach(function(id) {
+        var sel = document.getElementById(id);
+        if (sel) {
+          sel.addEventListener('change', function() { syncChargeToPilotField(id); });
+        }
       });
     }
 
@@ -889,7 +991,7 @@
           html += (flight.pilot || flight.pax ? ' • ' : '') + 'Tug/Winch: ' + flight.towPilot;
         }
         if (flight.payer) {
-          html += ' • Payer: ' + flight.payer;
+          html += ' • Charge to: ' + flight.payer;
         }
         html += '</div>';
       }
@@ -914,11 +1016,18 @@ function selectFlight(flight, cardEl) {
   selectedFlight = flight;
   document.getElementById('editFlightBtn').disabled = false;
 
-  if (flight.payer) document.getElementById('payerSelect').value = flight.payer;
+  // Assigned unconditionally: a stale 'AEF' left over from a previously
+  // selected flight would otherwise drive syncChargeToPilotField below and
+  // lock the Pilot field on a flight that isn't AEF at all.
+  document.getElementById('payerSelect').value = flight.payer || '';
 
   setToggleValue('pilot',       flight.pilot || '',      pilots);
   setToggleValue('pax',         flight.pax   || '',      instructors);
   setToggleValue('winchDriver', flight.towPilot || '',   winchDrivers);
+
+  // After setToggleValue (which would otherwise flip the Pilot field back to
+  // dropdown mode) and before _setFieldLocked (so a tug row's lock wins).
+  syncChargeToPilotField('payerSelect');
 
   // Tug-only (orphan) flights have no glider - Pilot/Pax/Payer don't apply.
   // Lock them so a Pilot can't be entered against a gliderless row (breaks
@@ -978,6 +1087,11 @@ function selectFlight(flight, cardEl) {
 
   if (!isTugOnly && !pilot) { showAlert('Please enter pilot name', 'error'); return; }
 
+  if (!isTugOnly) {
+    var aefMsg = _aefPilotError(payer, pilot, toggleState.pilot.visitorFlag);
+    if (aefMsg) { showAlert(aefMsg, 'error'); return; }
+  }
+
   var submitBtn = document.getElementById('submitBtn');
   submitBtn.disabled = true;
   submitBtn.textContent = 'Submitting...';
@@ -1005,6 +1119,7 @@ function selectFlight(flight, cardEl) {
               ['pilot','pax','winchDriver'].forEach(function(f) {
                 if (toggleState[f].isVisitor) toggleVisitorField(f, false);
               });
+              syncChargeToPilotField('payerSelect');
               submitBtn.disabled = false;
               submitBtn.textContent = 'Submit Flight Log';
             })
@@ -1062,6 +1177,7 @@ function selectFlight(flight, cardEl) {
       ['addGliderPilot','addGliderPax'].forEach(function(f) {
         if (toggleState[f].isVisitor) toggleVisitorField(f, false);
       });
+      syncChargeToPilotField('addGliderPayer');
       populateMergeCandidates('addGliderTugSelect', null);
       openModal('addGliderModal');
     }
@@ -1086,6 +1202,10 @@ function selectFlight(flight, cardEl) {
 
   setToggleValue('editPilot', flight.pilot   || '', pilots);
   setToggleValue('editPax',   flight.pax     || '', instructors);
+
+  // After setToggleValue, before the tug-only locking below - same ordering
+  // rationale as selectFlight().
+  syncChargeToPilotField('editPayer');
 
   // Tug-only (orphan) flights have no glider - Glider/CN/Type/Landing/
   // Pilot/Pax/Payer don't apply. Lock them and drop the required
@@ -1173,6 +1293,9 @@ function selectFlight(flight, cardEl) {
         paxVisitor:   toggleState.addGliderPax.visitorFlag
       };
 
+      var aefMsg = _aefPilotError(flightData.payer, flightData.pilot, flightData.pilotVisitor);
+      if (aefMsg) { showAlert(aefMsg, 'error'); return; }
+
       google.script.run
         .withSuccessHandler(function(result) {
           if (result.success) {
@@ -1239,6 +1362,12 @@ function selectFlight(flight, cardEl) {
         pilotVisitor: toggleState.editPilot.visitorFlag,
         paxVisitor:   toggleState.editPax.visitorFlag
       };
+
+      // Skipped for tug-only rows, where Pilot/Payer are never written.
+      if (flightData.glider) {
+        var aefMsg = _aefPilotError(flightData.payer, flightData.pilot, flightData.pilotVisitor);
+        if (aefMsg) { showAlert(aefMsg, 'error'); return; }
+      }
 
       google.script.run
         .withSuccessHandler(function(result) {

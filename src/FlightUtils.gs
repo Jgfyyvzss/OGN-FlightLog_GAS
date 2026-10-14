@@ -86,6 +86,25 @@ function parseTime(timeStr) {
 }
 
 /**
+ * Format a time as HH:MM for display on invoices and exports.
+ *
+ * The sheet stores times as HHhMM, but that reads oddly on an invoice line,
+ * so anything customer-facing uses the clock form. Accepts every format
+ * parseTime handles ("12h34", "12:34", "1234") and returns '' when the time
+ * is missing or unparseable, so callers can concatenate without guarding.
+ *
+ * @param {string} timeStr
+ * @returns {string} "HH:MM" or ''
+ */
+function formatClockTime(timeStr) {
+  const parsed = parseTime(timeStr);
+  if (!parsed) return '';
+  const hh = String(parsed.hour).padStart(2, '0');
+  const mm = String(parsed.minute).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
+/**
  * Calculate quality description from quality codes
  * Based on API documentation
  */

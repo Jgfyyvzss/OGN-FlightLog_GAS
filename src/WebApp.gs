@@ -169,6 +169,50 @@ function _mergeAwayRow(sheet, cols, mergeFlightKey) {
 }
 
 /**
+ * Guard for AEF flights: the Pilot field must carry the AEF customer's own
+ * name, typed in as a visitor.
+ *
+ * That name becomes the invoice Reference for both the AEF sales invoice
+ * (Invoicing.groupFlightsByCustomer sets reference: f.pilot) and the GAus
+ * membership purchase invoice (X_GAusMembershipExport.gs), so a wrong or
+ * generic value here silently misattributes a real payment to GAus.
+ *
+ * Requiring visitor-entered rather than dropdown-selected blocks the
+ * realistic failure mode - a club member's name left over from a previous
+ * selection surviving into an AEF submission. A club member buying an AEF
+ * is rare enough that the trade favours blocking; if it happens, type the
+ * member's name into the visitor field (the resulting Visitor='Y' is
+ * harmless - it does not affect AEF grouping, and the winch-rate
+ * difference is moot at a zero price multiplier).
+ *
+ * The webapp already enforces this client-side (Charge to = AEF locks the
+ * Pilot field into visitor mode); this is the server-side backstop.
+ *
+ * @param {string} pilot
+ * @param {string} payer
+ * @param {string} pilotVisitor - 'Y' or ''
+ * @returns {string|null} error message, or null if valid
+ */
+function _validateAefPilot(pilot, payer, pilotVisitor) {
+  if (payer !== PAYER.AEF) return null;
+
+  const name = String(pilot || '').trim();
+  const ignorePilot = getConfigValue('IGNORE_PILOT', false) || IGNORE_PILOT_DEFAULT;
+
+  if (!name) {
+    return "AEF flights require the customer's name in the Pilot field.";
+  }
+  if (name === ignorePilot) {
+    return "AEF flights require a real customer name, not " + ignorePilot + ".";
+  }
+  if (pilotVisitor !== 'Y') {
+    return "AEF flights require the customer's name to be typed in, " +
+           "not selected from the member list.";
+  }
+  return null;
+}
+
+/**
  * Submit pilot data from the main webapp form.
  * winchDriver writes to TowPilot column (a flight cannot be both aerotow and winch).
  *
@@ -232,6 +276,11 @@ function submitPilotData(flightKey, pilot, pax, payer, pilotVisitor, paxVisitor,
       return { success: false, message: "Flight and Pilot are required" };
     }
 
+    const aefError = _validateAefPilot(pilot, payer, pilotVisitor);
+    if (aefError) {
+      return { success: false, message: aefError };
+    }
+
     sheet.getRange(sheetRow, cols.Visitor).setValue(pilotVisitor || "");
     sheet.getRange(sheetRow, cols.Pilot).setValue(pilot);
     sheet.getRange(sheetRow, cols.PaxVisitor).setValue(paxVisitor || "");
@@ -267,6 +316,13 @@ function addManualGliderFlight(flightData) {
 
     if (!sheet) {
       return { success: false, message: "Sheet not found: " + sheetName };
+    }
+
+    const aefError = _validateAefPilot(
+      flightData.pilot, flightData.payer, flightData.pilotVisitor
+    );
+    if (aefError) {
+      return { success: false, message: aefError };
     }
 
     const flightKey = generateFlightKey(flightData.glider, flightData.date, flightData.takeOff);
@@ -463,6 +519,17 @@ function updateFlight(flightData) {
     // gliderless row breaks Manager/Reckon export). Only Date, TakeOff,
     // Remarks, TowPilot (and merge) are editable for a tug-only row.
     const isTugOnly = !data[rowIndex][cols.Glider - 1];
+
+    // Only relevant for glider rows - Pilot/Payer are never written to a
+    // tug-only row, so there is nothing to validate there.
+    if (!isTugOnly) {
+      const aefError = _validateAefPilot(
+        flightData.pilot, flightData.payer, flightData.pilotVisitor
+      );
+      if (aefError) {
+        return { success: false, message: aefError };
+      }
+    }
 
     sheet.getRange(sheetRow, cols.Date).setValue("'" + flightData.date);
     sheet.getRange(sheetRow, cols.TakeOff).setValue(flightData.takeOff);
